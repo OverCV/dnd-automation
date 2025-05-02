@@ -1,0 +1,3 @@
+pyfirmata
+cvzone
+opencv-python
