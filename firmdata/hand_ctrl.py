@@ -19,7 +19,7 @@ data_outputs = (f"d:{idx}:o" for idx in num_pines)
 leds: list[Port] = [board.get_pin(output) for output in data_outputs]
 
 
-def led(dedo_mano):
+def set_leds(dedo_mano):
     leds = mapeo_mano_a_leds[dedo_mano]
     for led in leds:
         led.write(1) if led else led.write(0)
