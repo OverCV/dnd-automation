@@ -39,7 +39,7 @@ void setup() {
   for (int i = 0; i < NUM_BUTTONS; i++) {
     pinMode(BUTTON_PINS[i], INPUT);
   }
-  
+
   // Configurar el pin del buzzer como salida
   pinMode(BUZZER_PIN, OUTPUT);
 }
@@ -49,17 +49,17 @@ void loop() {
   for (int i = 0; i < NUM_BUTTONS; i++) {
     // Leer el estado del botón actual
     int buttonState = digitalRead(BUTTON_PINS[i]);
-    
+
     // Si el botón está presionado (HIGH o 1), tocar la nota correspondiente
     if (buttonState == HIGH) {
       tone(BUZZER_PIN, NOTE_FREQUENCIES[i], NOTE_DURATION);
-      
+
       // Pequeña pausa para evitar solapamiento de tonos
       // cuando se presionan múltiples botones rápidamente
       delay(NOTE_DURATION / 2);
     }
   }
-  
+
   // Pequeña pausa para estabilizar el loop
   delay(LOOP_DELAY);
 }
