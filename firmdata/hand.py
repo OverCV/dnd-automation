@@ -22,7 +22,7 @@ while True:
         dedos_arriba = sum(dedo_arriba)
 
         print(dedo_arriba)
-        # set_leds(dedo_arriba)
+        set_leds(dedo_arriba)
 
         cv2.putText(
             img=foto,
