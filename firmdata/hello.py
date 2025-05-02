@@ -1,5 +1,6 @@
 from cvzone.HandTrackingModule import HandDetector
-from controller import set_leds
+
+from firmdata.controller import set_leds
 import cv2
 
 detector = HandDetector(
@@ -15,7 +16,8 @@ while True:
     manos, img = detector.findHands(frame)
 
     if manos:
-        mano_der, mano_izq = manos
+        print(manos)
+        mano_der = manos[0]
         finger_up = detector.fingersUp(mano_der)
         dedos_arriba = sum(finger_up)
 
