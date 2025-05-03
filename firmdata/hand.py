@@ -3,6 +3,7 @@ from cvzone.HandTrackingModule import HandDetector
 from hand_ctrl import set_leds
 import cv2
 
+num_str = "uno", "dos", "tres", "cuatro", "cinco"
 detector = HandDetector(
     detectionCon=0.8,
     maxHands=1,
@@ -18,6 +19,7 @@ while True:
     if hay_vision and manos:
         print(manos)
         mano = manos[0]
+
         dedo_arriba = detector.fingersUp(mano)
         dedos_arriba = sum(dedo_arriba)
 
@@ -26,7 +28,7 @@ while True:
 
         cv2.putText(
             img=foto,
-            text=f"Dedos Arriba: {dedos_arriba}",
+            text=f"Dedos Arriba: {num_str[dedos_arriba - 1]}",
             org=(20, 460),
             fontFace=cv2.FONT_HERSHEY_COMPLEX,
             fontScale=1,
@@ -35,7 +37,7 @@ while True:
             lineType=cv2.LINE_AA,
         )
 
-        puntos = manos[0]["lmList"]
+        puntos = mano["lmList"]
         for punto in enumerate(puntos):
             cv2.putText(
                 img=foto,

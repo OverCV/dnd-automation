@@ -6,7 +6,6 @@ comport = "COM5"
 board = Arduino(comport)
 
 num_pines = 8, 9, 10, 11, 12
-num_str = "uno", "dos", "tres", "cuatro", "cinco"
 mapeo_mano_a_leds = {
     (0, 0, 0, 0, 0): (0, 0, 0, 0, 0),
     (0, 0, 0, 1, 0): (1, 0, 0, 0, 0),
