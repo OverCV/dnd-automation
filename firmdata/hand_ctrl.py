@@ -1,28 +1,15 @@
 # firmdata\hand_ctrl.py
 from pyfirmata import Port, Arduino
 
-comport = "COM5"
-
-board = Arduino(comport)
+puerto = "COM5"
+placa = Arduino(puerto)
 
 num_pines = 8, 9, 10, 11, 12
-mapeo_mano_a_leds = {
-    (0, 0, 0, 0, 0): (0, 0, 0, 0, 0),
-    (0, 0, 0, 1, 0): (1, 0, 0, 0, 0),
-    (0, 0, 1, 1, 0): (1, 1, 0, 0, 0),
-    (0, 1, 1, 1, 0): (1, 1, 1, 0, 0),
-    (1, 1, 1, 1, 0): (1, 1, 1, 1, 0),
-    (1, 1, 1, 1, 1): (1, 1, 1, 1, 1),
-}
 
-data_outputs = [f"d:{idx}:o" for idx in num_pines]
-port_leds: list[Port] = [board.get_pin(output) for output in data_outputs]
+salidas_led = [f"d:{idx}:o" for idx in num_pines]
+puertos_led: list[Port] = [placa.get_pin(salida) for salida in salidas_led]
 
 
-def set_leds(dedo_mano):
-    if tuple(dedo_mano) not in mapeo_mano_a_leds:
-        return
-    leds = mapeo_mano_a_leds[tuple(dedo_mano)]
-
-    for led, port_led in zip(leds, port_leds):
+def switch_leds(estado_dedos: list[int]):
+    for led, port_led in zip(estado_dedos, puertos_led):
         port_led.write(led)
