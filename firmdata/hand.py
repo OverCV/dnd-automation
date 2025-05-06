@@ -14,7 +14,7 @@ video = cv2.VideoCapture(0)
 
 while True:
     hay_vision, foto = video.read()
-    # foto = cv2.flip(foto, 0)
+    foto = cv2.flip(foto, 0)
     manos, img = detector.findHands(foto)
 
     if hay_vision and manos:
