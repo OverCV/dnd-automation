@@ -10,21 +10,21 @@
 
 // Definición de pines para los LEDs
 // Se usan nombres descriptivos con la convención LED_POSICIÓN_COLOR
-const byte LED_1_ROJO = A2;
-const byte LED_2_AMARILLO = A1;
-const byte LED_3_VERDE = A0;
-const byte LED_4_VERDE = 2;
-const byte LED_5_VERDE = 3;
-const byte LED_6_VERDE = 4;
-const byte LED_7_VERDE = 5;
-const byte LED_8_VERDE = 6;
-const byte LED_9_VERDE = 7;
-const byte LED_10_VERDE = 8;
-const byte LED_11_VERDE = 9;
-const byte LED_12_VERDE = 10;
-const byte LED_13_VERDE = 11;
-const byte LED_14_AMARILLO = 12;
-const byte LED_15_ROJO = 13;
+const byte LED_1_ROJO = 0;
+const byte LED_2_AMARILLO = 1;
+const byte LED_3_VERDE = 2;
+const byte LED_4_VERDE = 3;
+const byte LED_5_VERDE = 4;
+const byte LED_6_VERDE = 5;
+const byte LED_7_VERDE = 6;
+const byte LED_8_VERDE = 7;
+const byte LED_9_VERDE = 8;
+const byte LED_10_VERDE = 9;
+const byte LED_11_VERDE = 10;
+const byte LED_12_VERDE = 11;
+const byte LED_13_VERDE = 12;
+const byte LED_14_AMARILLO = 13;
+const byte LED_15_ROJO = A5;
 
 // Array con todos los pines de LEDs para facilitar operaciones en masa
 const byte NUM_LEDS = 15;
@@ -40,14 +40,14 @@ const byte LED_PINS[NUM_LEDS] = {
 };
 
 // Definición de pines para los botones
-const byte BOTON_IZQUIERDO_PIN = A5;
-const byte BOTON_DERECHO_PIN = A4;
+const byte BOTON_IZQUIERDO_PIN = A0;
+const byte BOTON_DERECHO_PIN = A1;
 
 // Constantes para el estado del juego
-const byte LED_IZQUIERDO_LIMITE = 2;  // Posición del LED amarillo izquierdo
-const byte LED_DERECHO_LIMITE = 14;   // Posición del LED amarillo derecho
+const byte LED_IZQUIERDO_LIMITE = 0;  // Posición del LED amarillo izquierdo
+const byte LED_DERECHO_LIMITE = A0;   // Posición del LED amarillo derecho
 const byte POSICION_INICIAL = 7;      // Posición inicial de la pelota (LED central)
-const int VELOCIDAD_INICIAL = 200;    // Velocidad inicial en ms
+const int VELOCIDAD_INICIAL = 100;    // Velocidad inicial en ms
 const int INCREMENTO_VELOCIDAD = 10;  // Reducción de delay en ms por cada rebote exitoso
 
 // Variables para el estado del juego
