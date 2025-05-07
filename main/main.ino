@@ -146,3 +146,129 @@ void PELOTA(){
   break;
 }
 }
+
+/*==============================================================================
+ * SETUP()
+ *============================================================================*/
+
+void systemResetCallback()
+{
+  isResetting = true;
+
+  // initialize a defalt state
+  // TODO: option to load config from EEPROM instead of default
+
+#ifdef FIRMATA_SERIAL_FEATURE
+  serialFeature.reset();
+#endif
+
+  if (isI2CEnabled) {
+    disableI2CPins();
+  }
+
+  for (byte i = 0; i < TOTAL_PORTS; i++) {
+    reportPINs[i] = false;    // by default, reporting off
+    portConfigInputs[i] = 0;  // until activated
+    previousPINs[i] = 0;
+  }
+
+  for (byte i = 0; i < TOTAL_PINS; i++) {
+    // pins with analog capability default to analog input
+    // otherwise, pins default to digital output
+    if (IS_PIN_ANALOG(i)) {
+      // turns off pullup, configures everything
+      setPinModeCallback(i, PIN_MODE_ANALOG);
+    } else if (IS_PIN_DIGITAL(i)) {
+      // sets the output to 0, configures portConfigInputs
+      setPinModeCallback(i, OUTPUT);
+    }
+
+    servoPinMap[i] = 255;
+  }
+  // by default, do not report any analog inputs
+  analogInputsToReport = 0;
+
+  detachedServoCount = 0;
+  servoCount = 0;
+
+  /* send digital inputs to set the initial state on the host computer,
+   * since once in the loop(), this firmware will only send on change */
+  /*
+  TODO: this can never execute, since no pins default to digital input
+        but it will be needed when/if we support EEPROM stored config
+  for (byte i=0; i < TOTAL_PORTS; i++) {
+    outputPort(i, readPort(i, portConfigInputs[i]), true);
+  }
+  */
+  isResetting = false;
+}
+
+void setup()
+{
+  Firmata.setFirmwareVersion(FIRMATA_FIRMWARE_MAJOR_VERSION, FIRMATA_FIRMWARE_MINOR_VERSION);
+
+  Firmata.attach(ANALOG_MESSAGE, analogWriteCallback);
+  Firmata.attach(DIGITAL_MESSAGE, digitalWriteCallback);
+  Firmata.attach(REPORT_ANALOG, reportAnalogCallback);
+  Firmata.attach(REPORT_DIGITAL, reportDigitalCallback);
+  Firmata.attach(SET_PIN_MODE, setPinModeCallback);
+  Firmata.attach(SET_DIGITAL_PIN_VALUE, setPinValueCallback);
+  Firmata.attach(START_SYSEX, sysexCallback);
+  Firmata.attach(SYSTEM_RESET, systemResetCallback);
+
+  // to use a port other than Serial, such as Serial1 on an Arduino Leonardo or Mega,
+  // Call begin(baud) on the alternate serial port and pass it to Firmata to begin like this:
+  // Serial1.begin(57600);
+  // Firmata.begin(Serial1);
+  // However do not do this if you are using SERIAL_MESSAGE
+
+  Firmata.begin(57600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for ATmega32u4-based boards and Arduino 101
+  }
+
+  systemResetCallback();  // reset to default config
+}
+
+/*==============================================================================
+ * LOOP()
+ *============================================================================*/
+void loop()
+{
+  byte pin, analogPin;
+
+  /* DIGITALREAD - as fast as possible, check for changes and output them to the
+   * FTDI buffer using Serial.print()  */
+  checkDigitalInputs();
+
+  /* STREAMREAD - processing incoming messagse as soon as possible, while still
+   * checking digital inputs.  */
+  while (Firmata.available())
+    Firmata.processInput();
+
+  // TODO - ensure that Stream buffer doesn't go over 60 bytes
+
+  currentMillis = millis();
+  if (currentMillis - previousMillis > samplingInterval) {
+    previousMillis += samplingInterval;
+    /* ANALOGREAD - do all analogReads() at the configured sampling interval */
+    for (pin = 0; pin < TOTAL_PINS; pin++) {
+      if (IS_PIN_ANALOG(pin) && Firmata.getPinMode(pin) == PIN_MODE_ANALOG) {
+        analogPin = PIN_TO_ANALOG(pin);
+        if (analogInputsToReport & (1 << analogPin)) {
+          Firmata.sendAnalog(analogPin, analogRead(analogPin));
+        }
+      }
+    }
+    // report i2c data for all device with read continuous mode enabled
+    if (queryIndex > -1) {
+      for (byte i = 0; i < queryIndex + 1; i++) {
+        readAndReportData(query[i].addr, query[i].reg, query[i].bytes, query[i].stopTX);
+      }
+    }
+  }
+
+#ifdef FIRMATA_SERIAL_FEATURE
+  serialFeature.update();
+#endif
+}

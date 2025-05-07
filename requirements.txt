@@ -1,3 +1,4 @@
 pyfirmata
 cvzone
 opencv-python
+mediapipe
