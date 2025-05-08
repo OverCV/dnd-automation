@@ -14,7 +14,7 @@ it.start()
 # Constantes
 NUM_BUTTONS = 8
 BUTTON_PINS = [2, 3, 4, 5, 6, 7, 8, 9]
-BUZZER_PIN = 13
+BUZZER_PIN = 10
 
 # Frecuencias de notas musicales (en Hz)
 NOTE_FREQUENCIES = [
