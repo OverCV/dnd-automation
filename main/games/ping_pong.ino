@@ -81,12 +81,12 @@ void loop() {
   bool botonDerechoPresionado = digitalRead(BOTON_DERECHO_PIN) == HIGH;
 
   // Lógica para rebote en el extremo izquierdo
-  if (posicionPelota == LED_IZQUIERDO_LIMITE && botonIzquierdoPresionado) {
+  if ((posicionPelota == 2 || posicionPelota == 3) && botonIzquierdoPresionado) {
     direccionDerecha = true;  // Cambio de dirección hacia la derecha
     velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);  // Aumentar velocidad con un límite mínimo
   }
   // Lógica para rebote en el extremo derecho
-  else if (posicionPelota == LED_DERECHO_LIMITE && botonDerechoPresionado) {
+  else if ((posicionPelota == 13 || posicionPelota == 14) && botonDerechoPresionado) {
     direccionDerecha = false;  // Cambio de dirección hacia la izquierda
     velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);  // Aumentar velocidad con un límite mínimo
   }

@@ -1,4 +1,7 @@
 pyfirmata
+pygame
+numpy
+
 cvzone
 opencv-python
 mediapipe

@@ -12,7 +12,7 @@ const int NUM_BUTTONS = 8;
 const int BUTTON_PINS[NUM_BUTTONS] = {2, 3, 4, 5, 6, 7, 8, 9};
 
 // Pin para el buzzer
-const int BUZZER_PIN = 13;
+const int BUZZER_PIN = 10;
 
 // Frecuencias de notas musicales (en Hz)
 // Usando frecuencias de notas reales para un mejor sonido musical
