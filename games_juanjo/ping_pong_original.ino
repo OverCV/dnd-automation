@@ -1,6 +1,6 @@
-#define rojo1 A2
+#define rojo1 A0
 #define amarillo2 A1
-#define verde3 A0
+#define verde3 A2
 #define verde4 2
 #define verde5 3
 #define verde6 4

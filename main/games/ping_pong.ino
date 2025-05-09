@@ -2,24 +2,24 @@
  * Ping_Pong.ino - Juego de ping pong con LEDs en Arduino
  */
 
-// Definición de pines para los LEDs (corregido según tus comentarios)
-const byte LED_1_ROJO = 2;
-const byte LED_2_VERDE = 3;
-const byte LED_3_AZUL = 4;
-const byte LED_4_VERDE = 5;
-const byte LED_5_VERDE = 6;
-const byte LED_6_VERDE = 7;
-const byte LED_7_VERDE = 8;
-const byte LED_8_VERDE = 9;
-const byte LED_9_VERDE = 10;
-const byte LED_10_VERDE = 11;
-const byte LED_11_VERDE = 12;
-const byte LED_12_VERDE = 13;
+// Definición de pines para los LEDs
+const byte LED_1_ROJO = 13;
+const byte LED_2_VERDE = 12;
+const byte LED_3_AZUL = 11;
+const byte LED_4_VERDE = 10;
+const byte LED_5_VERDE = 9;
+const byte LED_6_VERDE = 8;
+const byte LED_7_VERDE = 7;
+const byte LED_8_VERDE = 6;
+const byte LED_9_VERDE = 5;
+const byte LED_10_VERDE = 4;
+const byte LED_11_VERDE = 3;
+const byte LED_12_VERDE = 2;
 const byte LED_13_AZUL = A2;
 const byte LED_14_VERDE = A1;
 const byte LED_15_ROJO = A0;
 
-// Array con todos los pines de LEDs (corregido para que coincida con los nombres)
+// Array con todos los pines de LEDs
 const byte NUM_LEDS = 15;
 const byte LED_PINS[NUM_LEDS] = {
   LED_1_ROJO, LED_2_VERDE, LED_3_AZUL,
@@ -29,7 +29,7 @@ const byte LED_PINS[NUM_LEDS] = {
   LED_13_AZUL, LED_14_VERDE, LED_15_ROJO
 };
 
-// Definición de pines para los botones
+// Definición de los botones
 const byte BOTON_IZQUIERDO_PIN = A5;
 const byte BOTON_DERECHO_PIN = A4;
 
@@ -53,7 +53,6 @@ unsigned long ultimoTiempoDebug = 0;
 void setup() {
   Serial.begin(9600); // Para depuración
   while (!Serial) { ; } // Esperar a que el puerto serial esté disponible
-  Serial.println("=== INICIANDO SISTEMA DE DEBUGGING DE PING PONG ===");
 
   // Configurar todos los pines de LEDs como salidas
   for (byte i = 0; i < NUM_LEDS; i++) {
@@ -64,30 +63,28 @@ void setup() {
   // Configurar los pines de botones como entradas con resistencias pull-up
   pinMode(BOTON_IZQUIERDO_PIN, INPUT_PULLUP);
   pinMode(BOTON_DERECHO_PIN, INPUT_PULLUP);
-  
+
   // Prueba de botones antes de iniciar el juego
-  Serial.println("PRUEBA DE BOTONES: Presiona ambos botones para continuar...");
   bool botonIzqProbado = false;
   bool botonDerProbado = false;
-  
+
   while (!botonIzqProbado || !botonDerProbado) {
     bool estadoIzq = digitalRead(BOTON_IZQUIERDO_PIN) == LOW;
     bool estadoDer = digitalRead(BOTON_DERECHO_PIN) == LOW;
-    
+
     if (estadoIzq && !botonIzqProbado) {
       Serial.println("¡Botón IZQUIERDO detectado!");
       botonIzqProbado = true;
     }
-    
+
     if (estadoDer && !botonDerProbado) {
       Serial.println("¡Botón DERECHO detectado!");
       botonDerProbado = true;
     }
-    
+
     delay(50);
   }
-  
-  Serial.println("Ambos botones funcionan correctamente.");
+
   delay(1000);
 
   // Inicializar el juego
@@ -98,7 +95,7 @@ void loop() {
   // Leer el estado actual de los botones (activo en BAJO por el pull-up)
   bool botonIzquierdoPresionado = digitalRead(BOTON_IZQUIERDO_PIN) == LOW;
   bool botonDerechoPresionado = digitalRead(BOTON_DERECHO_PIN) == LOW;
-  
+
   // Detectar cambios en los botones para depuración
   if (botonIzquierdoPresionado != ultimoEstadoBotonIzq) {
     Serial.print("[DEBUG] Botón IZQUIERDO: ");
@@ -110,10 +107,10 @@ void loop() {
     else if (posicionPelota == 1) Serial.println("VERDE IZQ");
     else if (posicionPelota == 2) Serial.println("AZUL IZQ");
     else Serial.println(posicionPelota);
-    
+
     ultimoEstadoBotonIzq = botonIzquierdoPresionado;
   }
-  
+
   if (botonDerechoPresionado != ultimoEstadoBotonDer) {
     Serial.print("[DEBUG] Botón DERECHO: ");
     Serial.print(botonDerechoPresionado ? "PRESIONADO" : "LIBERADO");
@@ -124,10 +121,10 @@ void loop() {
     else if (posicionPelota == 13) Serial.println("VERDE DER");
     else if (posicionPelota == 14) Serial.println("ROJO DER");
     else Serial.println(posicionPelota);
-    
+
     ultimoEstadoBotonDer = botonDerechoPresionado;
   }
-  
+
   // Log periódico del estado del juego
   unsigned long tiempoActual = millis();
   if (tiempoActual - ultimoTiempoDebug >= INTERVALO_DEBUG) {
@@ -139,7 +136,7 @@ void loop() {
     Serial.print(" | Velocidad: ");
     Serial.println(velocidadJuego);
   }
-  
+
   // Si el juego ha terminado, esperar a que se presione cualquier botón para reiniciar
   if (juegoTerminado) {
     if (botonIzquierdoPresionado || botonDerechoPresionado) {
@@ -154,7 +151,7 @@ void loop() {
   if (!haciaDerecha && (posicionPelota == 2)) {  // LED AZUL IZQ
     Serial.print("[REBOTE_IZQ] En azul izquierdo, botón: ");
     Serial.println(botonIzquierdoPresionado ? "PRESIONADO" : "NO PRESIONADO");
-    
+
     if (botonIzquierdoPresionado) {
       // Rebote exitoso
       haciaDerecha = true;
@@ -176,12 +173,12 @@ void loop() {
     velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);
     Serial.println("¡REBOTE EXITOSO en LED verde izquierdo!");
   }
-  
+
   // ZONA DE REBOTE DERECHA
   else if (haciaDerecha && (posicionPelota == 12)) {  // LED AZUL DER
     Serial.print("[REBOTE_DER] En azul derecho, botón: ");
     Serial.println(botonDerechoPresionado ? "PRESIONADO" : "NO PRESIONADO");
-    
+
     if (botonDerechoPresionado) {
       // Rebote exitoso
       haciaDerecha = false;
@@ -233,15 +230,15 @@ void loop() {
 void actualizarPosicionPelota() {
   apagarTodosLEDs();
   digitalWrite(LED_PINS[posicionPelota], HIGH);
-  
+
   // Debug: mostrar qué LED está encendido
-  if (posicionPelota == 0) 
+  if (posicionPelota == 0)
     Serial.println("[LED] Encendido ROJO IZQ");
-  else if (posicionPelota == 2) 
+  else if (posicionPelota == 2)
     Serial.println("[LED] Encendido AZUL IZQ");
-  else if (posicionPelota == 12) 
+  else if (posicionPelota == 12)
     Serial.println("[LED] Encendido AZUL DER");
-  else if (posicionPelota == 14) 
+  else if (posicionPelota == 14)
     Serial.println("[LED] Encendido ROJO DER");
 }
 
@@ -262,13 +259,13 @@ void reiniciarJuego() {
   velocidadJuego = VELOCIDAD_INICIAL;
   haciaDerecha = random(2) == 0; // Dirección aleatoria al inicio
   juegoTerminado = false;
-  
+
   // Secuencia de inicio - muestra todos los LEDs brevemente
   for (byte i = 0; i < NUM_LEDS; i++) {
     digitalWrite(LED_PINS[i], HIGH);
   }
   delay(500);
-  
+
   apagarTodosLEDs();
   actualizarPosicionPelota();
   Serial.println("=== ¡JUEGO INICIADO! ===");

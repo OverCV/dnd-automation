@@ -1,277 +1,291 @@
 /**
- * Ping_Pong.ino - Juego de ping pong con LEDs en Arduino
+ * Simplified LCD Ping Pong Game for Arduino with LCD Keypad Shield
+ * 
+ * Features:
+ * - Ball follows a fixed, predictable trajectory
+ * - Paddles appear on both lines when the corresponding button is pressed
+ * - Left paddle appears when LEFT button is pressed
+ * - Right paddle appears when RIGHT button is pressed
+ * - Score increases with each successful bounce
+ * 
+ * Controls:
+ * - LEFT button: Activate left paddle (spans both rows)
+ * - RIGHT button: Activate right paddle (spans both rows)
+ * - SELECT button: Pause/Resume game or restart after game over
  */
 
-// Definición de pines para los LEDs (corregido según tus comentarios)
-const byte LED_1_ROJO = 2;
-const byte LED_2_VERDE = 3;
-const byte LED_3_AZUL = 4;
-const byte LED_4_VERDE = 5;
-const byte LED_5_VERDE = 6;
-const byte LED_6_VERDE = 7;
-const byte LED_7_VERDE = 8;
-const byte LED_8_VERDE = 9;
-const byte LED_9_VERDE = 10;
-const byte LED_10_VERDE = 11;
-const byte LED_11_VERDE = 12;
-const byte LED_12_VERDE = 13;
-const byte LED_13_AZUL = A2;
-const byte LED_14_VERDE = A1;
-const byte LED_15_ROJO = A0;
+#include <LiquidCrystal.h>
 
-// Array con todos los pines de LEDs (corregido para que coincida con los nombres)
-const byte NUM_LEDS = 15;
-const byte LED_PINS[NUM_LEDS] = {
-  LED_1_ROJO, LED_2_VERDE, LED_3_AZUL,
-  LED_4_VERDE, LED_5_VERDE, LED_6_VERDE,
-  LED_7_VERDE, LED_8_VERDE, LED_9_VERDE,
-  LED_10_VERDE, LED_11_VERDE, LED_12_VERDE,
-  LED_13_AZUL, LED_14_VERDE, LED_15_ROJO
+// Define LCD pins for the LCD Keypad Shield
+const int RS = 8, EN = 9, D4 = 4, D5 = 5, D6 = 6, D7 = 7;
+LiquidCrystal lcd(RS, EN, D4, D5, D6, D7);
+
+// Custom characters
+byte ballChar[8] = {
+  B00000,
+  B00000,
+  B00100,
+  B01110,
+  B01110,
+  B00100,
+  B00000,
+  B00000
 };
 
-// Definición de pines para los botones
-const byte BOTON_IZQUIERDO_PIN = A5;
-const byte BOTON_DERECHO_PIN = A4;
+byte leftPaddleChar[8] = {
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000,
+  B10000
+};
 
-// Constantes para el estado del juego
-const byte POSICION_INICIAL = 7;      // Posición inicial de la pelota (LED central)
-const int VELOCIDAD_INICIAL = 300;    // Velocidad inicial en ms
-const int INCREMENTO_VELOCIDAD = 15;  // Reducción de delay en ms por cada rebote exitoso
-const unsigned long INTERVALO_DEBUG = 100; // Tiempo entre mensajes de debug (ms)
+byte rightPaddleChar[8] = {
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001,
+  B00001
+};
 
-// Variables para el estado del juego
-byte posicionPelota = POSICION_INICIAL; // Índice en el array (0-14)
-int velocidadJuego = VELOCIDAD_INICIAL;
-bool haciaDerecha = true;            // true = hacia la derecha, false = hacia la izquierda
-bool juegoTerminado = false;
+// Button read analog pin
+const int BUTTONS_PIN = A0;
 
-// Variables para depuración
-bool ultimoEstadoBotonIzq = HIGH;
-bool ultimoEstadoBotonDer = HIGH;
-unsigned long ultimoTiempoDebug = 0;
+// Button values
+const int BTN_RIGHT_VAL = 0;
+const int BTN_UP_VAL = 100;
+const int BTN_DOWN_VAL = 255;
+const int BTN_LEFT_VAL = 400;
+const int BTN_SELECT_VAL = 640;
+const int BTN_NONE_VAL = 1023;
+
+// Game constants
+const int LCD_WIDTH = 16;
+const int LCD_HEIGHT = 2;
+const unsigned long GAME_SPEED = 300; // Fixed speed (milliseconds between moves)
+
+// Game variables
+int ballX = LCD_WIDTH / 2;
+int ballY = 0;
+int ballDX = 1; // Fixed X direction movement (1 character at a time)
+int ballDY = 1; // Fixed Y direction movement (1 character at a time)
+bool leftPaddleActive = false;
+bool rightPaddleActive = false;
+unsigned long lastMoveTime = 0;
+int score = 0;
+bool gameOver = false;
+bool gamePaused = false;
 
 void setup() {
-  Serial.begin(9600); // Para depuración
-  while (!Serial) { ; } // Esperar a que el puerto serial esté disponible
-  Serial.println("=== INICIANDO SISTEMA DE DEBUGGING DE PING PONG ===");
-
-  // Configurar todos los pines de LEDs como salidas
-  for (byte i = 0; i < NUM_LEDS; i++) {
-    pinMode(LED_PINS[i], OUTPUT);
-    digitalWrite(LED_PINS[i], LOW);
-  }
-
-  // Configurar los pines de botones como entradas con resistencias pull-up
-  pinMode(BOTON_IZQUIERDO_PIN, INPUT_PULLUP);
-  pinMode(BOTON_DERECHO_PIN, INPUT_PULLUP);
+  // Initialize LCD
+  lcd.begin(LCD_WIDTH, LCD_HEIGHT);
   
-  // Prueba de botones antes de iniciar el juego
-  Serial.println("PRUEBA DE BOTONES: Presiona ambos botones para continuar...");
-  bool botonIzqProbado = false;
-  bool botonDerProbado = false;
+  // Create custom characters
+  lcd.createChar(0, ballChar);
+  lcd.createChar(1, leftPaddleChar);
+  lcd.createChar(2, rightPaddleChar);
   
-  while (!botonIzqProbado || !botonDerProbado) {
-    bool estadoIzq = digitalRead(BOTON_IZQUIERDO_PIN) == LOW;
-    bool estadoDer = digitalRead(BOTON_DERECHO_PIN) == LOW;
-    
-    if (estadoIzq && !botonIzqProbado) {
-      Serial.println("¡Botón IZQUIERDO detectado!");
-      botonIzqProbado = true;
-    }
-    
-    if (estadoDer && !botonDerProbado) {
-      Serial.println("¡Botón DERECHO detectado!");
-      botonDerProbado = true;
-    }
-    
-    delay(50);
-  }
+  // Initialize analog input for buttons
+  pinMode(BUTTONS_PIN, INPUT);
   
-  Serial.println("Ambos botones funcionan correctamente.");
-  delay(1000);
-
-  // Inicializar el juego
-  reiniciarJuego();
+  // Show welcome screen
+  showWelcomeScreen();
+  waitForButtonPress();
+  
+  // Initialize game
+  initializeGame();
 }
 
 void loop() {
-  // Leer el estado actual de los botones (activo en BAJO por el pull-up)
-  bool botonIzquierdoPresionado = digitalRead(BOTON_IZQUIERDO_PIN) == LOW;
-  bool botonDerechoPresionado = digitalRead(BOTON_DERECHO_PIN) == LOW;
-  
-  // Detectar cambios en los botones para depuración
-  if (botonIzquierdoPresionado != ultimoEstadoBotonIzq) {
-    Serial.print("[DEBUG] Botón IZQUIERDO: ");
-    Serial.print(botonIzquierdoPresionado ? "PRESIONADO" : "LIBERADO");
-    Serial.print(" | Posición pelota: ");
-    Serial.print(posicionPelota);
-    Serial.print(" | LED actual: ");
-    if (posicionPelota == 0) Serial.println("ROJO IZQ");
-    else if (posicionPelota == 1) Serial.println("VERDE IZQ");
-    else if (posicionPelota == 2) Serial.println("AZUL IZQ");
-    else Serial.println(posicionPelota);
+  if (!gameOver && !gamePaused) {
+    // Read button input for paddles
+    readButtons();
     
-    ultimoEstadoBotonIzq = botonIzquierdoPresionado;
-  }
-  
-  if (botonDerechoPresionado != ultimoEstadoBotonDer) {
-    Serial.print("[DEBUG] Botón DERECHO: ");
-    Serial.print(botonDerechoPresionado ? "PRESIONADO" : "LIBERADO");
-    Serial.print(" | Posición pelota: ");
-    Serial.print(posicionPelota);
-    Serial.print(" | LED actual: ");
-    if (posicionPelota == 12) Serial.println("AZUL DER");
-    else if (posicionPelota == 13) Serial.println("VERDE DER");
-    else if (posicionPelota == 14) Serial.println("ROJO DER");
-    else Serial.println(posicionPelota);
-    
-    ultimoEstadoBotonDer = botonDerechoPresionado;
-  }
-  
-  // Log periódico del estado del juego
-  unsigned long tiempoActual = millis();
-  if (tiempoActual - ultimoTiempoDebug >= INTERVALO_DEBUG) {
-    ultimoTiempoDebug = tiempoActual;
-    Serial.print("Posición: ");
-    Serial.print(posicionPelota);
-    Serial.print(" | Dirección: ");
-    Serial.print(haciaDerecha ? "DERECHA" : "IZQUIERDA");
-    Serial.print(" | Velocidad: ");
-    Serial.println(velocidadJuego);
-  }
-  
-  // Si el juego ha terminado, esperar a que se presione cualquier botón para reiniciar
-  if (juegoTerminado) {
-    if (botonIzquierdoPresionado || botonDerechoPresionado) {
-      Serial.println("[DEBUG] Reiniciando juego por presión de botón...");
-      delay(500); // Evitar rebotes
-      reiniciarJuego();
+    // Update game at specified intervals
+    unsigned long currentTime = millis();
+    if (currentTime - lastMoveTime >= GAME_SPEED) {
+      lastMoveTime = currentTime;
+      updateGame();
+      drawGame();
     }
-    return;
+  } else if (gameOver) {
+    // Check for restart (SELECT button)
+    int button = getButton();
+    if (button == BTN_SELECT_VAL) {
+      delay(300); // Debounce
+      initializeGame();
+    }
+  } else if (gamePaused) {
+    // Check for unpause (SELECT button)
+    int button = getButton();
+    if (button == BTN_SELECT_VAL) {
+      gamePaused = false;
+      delay(300); // Debounce
+      drawGame();
+    }
   }
+}
 
-  // ZONA DE REBOTE IZQUIERDA
-  if (!haciaDerecha && (posicionPelota == 2)) {  // LED AZUL IZQ
-    Serial.print("[REBOTE_IZQ] En azul izquierdo, botón: ");
-    Serial.println(botonIzquierdoPresionado ? "PRESIONADO" : "NO PRESIONADO");
-    
-    if (botonIzquierdoPresionado) {
-      // Rebote exitoso
-      haciaDerecha = true;
-      velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);
-      Serial.println("¡REBOTE EXITOSO en LED azul izquierdo!");
+void readButtons() {
+  int button = getButton();
+  
+  // Handle paddle buttons - paddles are activated when buttons are pressed
+  leftPaddleActive = (button == BTN_LEFT_VAL);
+  rightPaddleActive = (button == BTN_RIGHT_VAL);
+  
+  // Pause game with SELECT
+  if (button == BTN_SELECT_VAL) {
+    gamePaused = true;
+    lcd.clear();
+    lcd.setCursor(4, 0);
+    lcd.print("PAUSED");
+    lcd.setCursor(2, 1);
+    lcd.print("Score: ");
+    lcd.print(score);
+    delay(300); // Debounce
+  }
+}
+
+int getButton() {
+  int buttonValue = analogRead(BUTTONS_PIN);
+  
+  // Return approximate button value
+  if (buttonValue < 50) return BTN_RIGHT_VAL;
+  if (buttonValue < 150) return BTN_UP_VAL;
+  if (buttonValue < 350) return BTN_DOWN_VAL;
+  if (buttonValue < 500) return BTN_LEFT_VAL;
+  if (buttonValue < 850) return BTN_SELECT_VAL;
+  
+  return BTN_NONE_VAL;
+}
+
+bool readAnyButton() {
+  return getButton() != BTN_NONE_VAL;
+}
+
+void waitForButtonPress() {
+  // Wait until a button is pressed
+  while (!readAnyButton()) {
+    delay(100);
+  }
+  delay(300); // Debounce
+}
+
+void showWelcomeScreen() {
+  lcd.clear();
+  lcd.setCursor(3, 0);
+  lcd.print("PING PONG");
+  lcd.setCursor(0, 1);
+  lcd.print("Press any button");
+}
+
+void initializeGame() {
+  // Reset game variables
+  ballX = LCD_WIDTH / 2;
+  ballY = 0;
+  
+  // Fixed initial direction - always start the same way
+  ballDX = 1;  // Move right
+  ballDY = 1;  // Move down
+  
+  leftPaddleActive = false;
+  rightPaddleActive = false;
+  score = 0;
+  gameOver = false;
+  gamePaused = false;
+  
+  // Draw initial state
+  lcd.clear();
+  drawGame();
+}
+
+void updateGame() {
+  // Update ball position
+  ballX += ballDX;
+  ballY += ballDY;
+  
+  // Ball collision with top and bottom edges
+  if (ballY < 0) {
+    ballY = 0;
+    ballDY = -ballDY;  // Reverse Y direction
+  } else if (ballY >= LCD_HEIGHT) {
+    ballY = LCD_HEIGHT - 1;  // Keep on screen
+    ballDY = -ballDY;  // Reverse Y direction
+  }
+  
+  // Ball collision with left edge
+  if (ballX <= 0) {
+    if (leftPaddleActive) {
+      // Ball hits left paddle
+      ballX = 1;  // Move away from edge
+      ballDX = -ballDX;  // Reverse X direction
+      score++;
     } else {
-      // Sin rebote, el juego termina
-      posicionPelota = 0;
-      juegoTerminado = true;
-      apagarTodosLEDs();
-      digitalWrite(LED_PINS[0], HIGH);
-      Serial.println("¡JUEGO TERMINADO! El jugador izquierdo no rebotó a tiempo.");
+      // Game over - left paddle not activated
+      gameOver = true;
+      showGameOver("Left miss!");
       return;
     }
   }
-  else if (!haciaDerecha && (posicionPelota == 1) && botonIzquierdoPresionado) {  // LED VERDE junto al AZUL
-    // Rebote en LED verde izquierdo
-    haciaDerecha = true;
-    velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);
-    Serial.println("¡REBOTE EXITOSO en LED verde izquierdo!");
-  }
   
-  // ZONA DE REBOTE DERECHA
-  else if (haciaDerecha && (posicionPelota == 12)) {  // LED AZUL DER
-    Serial.print("[REBOTE_DER] En azul derecho, botón: ");
-    Serial.println(botonDerechoPresionado ? "PRESIONADO" : "NO PRESIONADO");
-    
-    if (botonDerechoPresionado) {
-      // Rebote exitoso
-      haciaDerecha = false;
-      velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);
-      Serial.println("¡REBOTE EXITOSO en LED azul derecho!");
+  // Ball collision with right edge
+  if (ballX >= LCD_WIDTH - 1) {
+    if (rightPaddleActive) {
+      // Ball hits right paddle
+      ballX = LCD_WIDTH - 2;  // Move away from edge
+      ballDX = -ballDX;  // Reverse X direction
+      score++;
     } else {
-      // Sin rebote, el juego termina
-      posicionPelota = 14;
-      juegoTerminado = true;
-      apagarTodosLEDs();
-      digitalWrite(LED_PINS[14], HIGH);
-      Serial.println("¡JUEGO TERMINADO! El jugador derecho no rebotó a tiempo.");
+      // Game over - right paddle not activated
+      gameOver = true;
+      showGameOver("Right miss!");
       return;
     }
   }
-  else if (haciaDerecha && (posicionPelota == 13) && botonDerechoPresionado) {  // LED VERDE junto al AZUL
-    // Rebote en LED verde derecho
-    haciaDerecha = false;
-    velocidadJuego = max(velocidadJuego - INCREMENTO_VELOCIDAD, 50);
-    Serial.println("¡REBOTE EXITOSO en LED verde derecho!");
-  }
-
-  // Mover la pelota en la dirección actual
-  if (haciaDerecha) {
-    posicionPelota++;
-  } else {
-    posicionPelota--;
-  }
-
-  // Verificar si llegamos a un LED rojo (extremo)
-  if (posicionPelota == 0 || posicionPelota == 14) {
-    juegoTerminado = true;
-    apagarTodosLEDs();
-    digitalWrite(LED_PINS[posicionPelota], HIGH);
-    Serial.println("¡JUEGO TERMINADO! La pelota llegó a un extremo sin rebote.");
-    return;
-  }
-
-  // Actualizar la visualización de los LEDs
-  actualizarPosicionPelota();
-
-  // Esperar según la velocidad actual del juego
-  delay(velocidadJuego);
 }
 
-/**
- * Actualiza los LEDs para mostrar la posición actual de la pelota
- */
-void actualizarPosicionPelota() {
-  apagarTodosLEDs();
-  digitalWrite(LED_PINS[posicionPelota], HIGH);
+void drawGame() {
+  lcd.clear();
   
-  // Debug: mostrar qué LED está encendido
-  if (posicionPelota == 0) 
-    Serial.println("[LED] Encendido ROJO IZQ");
-  else if (posicionPelota == 2) 
-    Serial.println("[LED] Encendido AZUL IZQ");
-  else if (posicionPelota == 12) 
-    Serial.println("[LED] Encendido AZUL DER");
-  else if (posicionPelota == 14) 
-    Serial.println("[LED] Encendido ROJO DER");
+  // Draw ball
+  lcd.setCursor(ballX, ballY);
+  lcd.write(byte(0));
+  
+  // Draw left paddle if active (on both rows)
+  if (leftPaddleActive) {
+    lcd.setCursor(0, 0);
+    lcd.write(byte(1));
+    lcd.setCursor(0, 1);
+    lcd.write(byte(1));
+  }
+  
+  // Draw right paddle if active (on both rows)
+  if (rightPaddleActive) {
+    lcd.setCursor(LCD_WIDTH - 1, 0);
+    lcd.write(byte(2));
+    lcd.setCursor(LCD_WIDTH - 1, 1);
+    lcd.write(byte(2));
+  }
+  
+  // Display score in the center top
+  lcd.setCursor(LCD_WIDTH/2 - 1, 0);
+  lcd.print(score);
 }
 
-/**
- * Apaga todos los LEDs
- */
-void apagarTodosLEDs() {
-  for (byte i = 0; i < NUM_LEDS; i++) {
-    digitalWrite(LED_PINS[i], LOW);
-  }
-}
-
-/**
- * Reinicia el juego a sus valores iniciales
- */
-void reiniciarJuego() {
-  posicionPelota = POSICION_INICIAL;
-  velocidadJuego = VELOCIDAD_INICIAL;
-  haciaDerecha = random(2) == 0; // Dirección aleatoria al inicio
-  juegoTerminado = false;
+void showGameOver(const char* message) {
+  lcd.clear();
+  lcd.setCursor(3, 0);
+  lcd.print("GAME OVER");
   
-  // Secuencia de inicio - muestra todos los LEDs brevemente
-  for (byte i = 0; i < NUM_LEDS; i++) {
-    digitalWrite(LED_PINS[i], HIGH);
-  }
-  delay(500);
-  
-  apagarTodosLEDs();
-  actualizarPosicionPelota();
-  Serial.println("=== ¡JUEGO INICIADO! ===");
-  Serial.print("Dirección inicial: ");
-  Serial.println(haciaDerecha ? "DERECHA" : "IZQUIERDA");
+  // Show which side missed and the score
+  lcd.setCursor(0, 1);
+  lcd.print(message);
+  lcd.print(" S:");
+  lcd.print(score);
 }
