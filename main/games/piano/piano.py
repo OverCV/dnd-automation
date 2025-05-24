@@ -230,3 +230,10 @@ if __name__ == "__main__":
         print("❌ Instala las dependencias:")
         print("   pip install pyserial pygame numpy")
         print(f"   Error: {e}")
+
+# INSTRUCCIONES DE USO:
+# 1. Sube el código Arduino al microcontrolador
+# 2. Conecta los botones entre pines 2-9 y GND
+# 3. Instala dependencias Python: pip install pyserial pygame numpy
+# 4. Ejecuta este script Python
+# 5. ¡Presiona los botones para tocar notas!

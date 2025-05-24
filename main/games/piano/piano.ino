@@ -59,3 +59,15 @@ void enviarNota(int indiceBoton) {
         Serial.println(indiceBoton);
     }
 }
+
+/*
+PROTOCOLO DE COMUNICACIÓN SERIAL:
+- "PIANO_READY" -> Arduino listo
+- "NOTA:0" hasta "NOTA:7" -> Botón presionado (0=Do, 1=Re, etc.)
+
+CONEXIONES:
+- Botones entre pines 2-9 y GND
+- No necesitas resistencias (usa INPUT_PULLUP)
+- Cable USB para comunicación serial
+*/
+
