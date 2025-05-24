@@ -1,5 +1,6 @@
 pygame
 numpy
+matplotlib
 
 cvzone
 opencv-python
