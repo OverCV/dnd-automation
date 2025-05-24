@@ -1,0 +1,5 @@
+source Scripts/activate
+
+deactivate
+
+pip install -r requirements.txt --exists-action i
