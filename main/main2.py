@@ -3,21 +3,6 @@ if not hasattr(inspect, 'getargspec'):
     inspect.getargspec = inspect.getfullargspec
 
 
-"""
-Sistema Completo de Juegos Arduino - 100% Python con Firmata
-Reemplaza TODOS los archivos .ino por implementaciones Python puras
-
-ANTES: 5 juegos × 2 archivos (.ino + .py) = 10 archivos + compilación
-AHORA: 1 archivo Python = Todo integrado sin compilación
-
-JUEGOS INCLUIDOS:
-1. Piano Digital (8 botones → 8 notas)
-2. Ping Pong (LCD + Keypad Shield)
-3. Simon Says (6 LEDs + 6 botones keypad)
-4. Two-Lane Runner (LCD + Keypad Shield)
-5. Snake Game (LCD + Keypad Shield)
-"""
-
 import tkinter as tk
 from tkinter import ttk, messagebox, font as tkfont
 import pygame
@@ -31,175 +16,7 @@ from typing import Optional, List, Tuple, Dict, Any
 import sys
 from pathlib import Path
 
-try:
-    import pyfirmata
-    from pyfirmata import util
-    import serial.tools.list_ports
-except ImportError:
-    print("❌ Instalar dependencias:")
-    print("   pip install pyfirmata pygame numpy pyserial")
-    sys.exit(1)
 
-
-class ArduinoManager:
-    """Gestor singleton del Arduino con Firmata"""
-
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.initialized = False
-        return cls._instance
-
-    def __init__(self):
-        if self.initialized:
-            return
-
-        self.board = None
-        self.connected = False
-        self.port = None
-        self.pins = {}  # Cache de pines configurados
-        self.iterator = None
-        self.initialized = True
-
-    def connect(self, port: str) -> bool:
-        """Conectar al Arduino"""
-        try:
-            print(f"🔌 Conectando a Arduino en {port}...")
-            self.board = pyfirmata.Arduino(port)
-
-            # Inicializar iterator
-            self.iterator = util.Iterator(self.board)
-            self.iterator.start()
-            time.sleep(3)  # Tiempo para estabilización
-
-            self.connected = True
-            self.port = port
-            print("✅ Arduino conectado con StandardFirmata")
-            return True
-
-        except Exception as e:
-            print(f"❌ Error conectando: {e}")
-            self.connected = False
-            return False
-
-    def disconnect(self):
-        """Desconectar Arduino"""
-        if self.board and self.connected:
-            try:
-                self.board.exit()
-                self.connected = False
-                self.pins.clear()
-                print("🔌 Arduino desconectado")
-            except:
-                pass
-
-    def get_pin(self, pin_spec: str):
-        """Obtener pin (con cache)"""
-        if not self.connected:
-            raise Exception("Arduino no conectado")
-
-        if pin_spec not in self.pins:
-            self.pins[pin_spec] = self.board.get_pin(pin_spec)
-
-        return self.pins[pin_spec]
-
-    def find_arduino_port(self) -> Optional[str]:
-        """Buscar puerto Arduino automáticamente"""
-        ports = serial.tools.list_ports.comports()
-        for port in ports:
-            if any(keyword in port.description.upper() for keyword in
-                   ['ARDUINO', 'CH340', 'CH341', 'CP210', 'FTDI']):
-                return port.device
-        return None
-
-
-class LCDController:
-    """Controlador LCD HD44780 usando Firmata"""
-
-    def __init__(self, arduino_manager, rs=8, en=9, d4=4, d5=5, d6=6, d7=7):
-        self.arduino = arduino_manager
-
-        # Configurar pines
-        self.rs = self.arduino.get_pin(f'd:{rs}:o')
-        self.en = self.arduino.get_pin(f'd:{en}:o')
-        self.d4 = self.arduino.get_pin(f'd:{d4}:o')
-        self.d5 = self.arduino.get_pin(f'd:{d5}:o')
-        self.d6 = self.arduino.get_pin(f'd:{d6}:o')
-        self.d7 = self.arduino.get_pin(f'd:{d7}:o')
-
-        # Inicializar LCD
-        self._initialize()
-
-    def _initialize(self):
-        """Secuencia de inicialización LCD"""
-        time.sleep(0.05)
-        self._write_4_bits(0x03)
-        time.sleep(0.005)
-        self._write_4_bits(0x03)
-        time.sleep(0.00015)
-        self._write_4_bits(0x03)
-        time.sleep(0.00015)
-        self._write_4_bits(0x02)
-        time.sleep(0.00015)
-
-        self._command(0x28)  # 4-bit, 2 líneas
-        self._command(0x0C)  # Display on
-        self._command(0x06)  # Entry mode
-        self.clear()
-
-    def _command(self, value):
-        """Enviar comando"""
-        self.rs.write(0)
-        self._write_4_bits(value >> 4)
-        self._write_4_bits(value & 0x0F)
-
-    def _write(self, value):
-        """Escribir dato"""
-        self.rs.write(1)
-        self._write_4_bits(value >> 4)
-        self._write_4_bits(value & 0x0F)
-
-    def _write_4_bits(self, value):
-        """Escribir 4 bits"""
-        self.d4.write((value >> 0) & 1)
-        self.d5.write((value >> 1) & 1)
-        self.d6.write((value >> 2) & 1)
-        self.d7.write((value >> 3) & 1)
-
-        self.en.write(0)
-        time.sleep(0.000001)
-        self.en.write(1)
-        time.sleep(0.000001)
-        self.en.write(0)
-        time.sleep(0.0001)
-
-    def clear(self):
-        """Limpiar LCD"""
-        self._command(0x01)
-        time.sleep(0.002)
-
-    def set_cursor(self, col, row):
-        """Posicionar cursor"""
-        row_offsets = [0x00, 0x40]
-        if row < len(row_offsets):
-            self._command(0x80 + col + row_offsets[row])
-
-    def print(self, text):
-        """Imprimir texto"""
-        for char in str(text):
-            self._write(ord(char))
-
-    def create_char(self, location, pattern):
-        """Crear carácter personalizado"""
-        self._command(0x40 + (location * 8))
-        for line in pattern:
-            self._write(line)
-
-    def write_custom_char(self, char_code):
-        """Escribir carácter personalizado"""
-        self._write(char_code)
 
 
 class KeypadReader:
@@ -261,37 +78,6 @@ class KeypadReader:
         return None
 
 
-class LCDKeypadShieldReader:
-    """Lector especializado para LCD Keypad Shield"""
-
-    def __init__(self, arduino_manager, analog_pin=0):
-        self.arduino = arduino_manager
-        self.analog_pin = self.arduino.get_pin(f'a:{analog_pin}:i')
-
-        # Valores del LCD Keypad Shield
-        self.button_values = {
-            'RIGHT': (0, 50),
-            'UP': (50, 150),
-            'DOWN': (150, 350),
-            'LEFT': (350, 500),
-            'SELECT': (500, 850),
-            'NONE': (850, 1024)
-        }
-
-    def read_button(self):
-        """Leer botón presionado"""
-        if self.analog_pin.read() is None:
-            return 'NONE'
-
-        analog_value = int(self.analog_pin.read() * 1023)
-
-        for button, (min_val, max_val) in self.button_values.items():
-            if min_val <= analog_value < max_val:
-                return button
-
-        return 'NONE'
-
-
 class AudioEngine:
     """Motor de audio para generar sonidos"""
 
@@ -337,37 +123,6 @@ class AudioEngine:
 
         sound = pygame.sndarray.make_sound(stereo_data)
         sound.play()
-
-
-class BaseGame(ABC):
-    """Clase base para todos los juegos"""
-
-    def __init__(self, arduino_manager):
-        self.arduino = arduino_manager
-        self.running = False
-        self.game_thread = None
-        self.name = "Base Game"
-        self.description = "Juego base"
-
-    @abstractmethod
-    def initialize_hardware(self) -> bool:
-        """Inicializar hardware específico del juego"""
-        pass
-
-    @abstractmethod
-    def start_game(self) -> bool:
-        """Iniciar juego"""
-        pass
-
-    @abstractmethod
-    def stop_game(self):
-        """Detener juego"""
-        pass
-
-    @abstractmethod
-    def get_game_status(self) -> Dict[str, Any]:
-        """Obtener estado del juego"""
-        pass
 
 
 class PianoGame(BaseGame):
@@ -1760,4 +1515,3 @@ class GameManagerUI:
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.root.mainloop()
-

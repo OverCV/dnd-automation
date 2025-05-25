@@ -31,7 +31,7 @@ class LCDController:
 
     def backlight_on(self):
         """Enciende el backlight"""
-        self.set_backlight(200)
+        self.set_backlight(255)
 
     def set_backlight(self, value):
         """Ajusta el brillo del backlight (0-255)"""
@@ -119,6 +119,7 @@ class ButtonReader:
 
     def __init__(self, arduino_manager, analog_pin=0):
         """Inicializar lector de botones"""
+        self.arduino = arduino_manager
         self.analog_pin = arduino_manager.get_pin(f'a:{analog_pin}:i')
         self.button_values = {
             'RIGHT': (0, 50),

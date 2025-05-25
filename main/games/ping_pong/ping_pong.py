@@ -10,7 +10,7 @@ from core.arduino_manager import ArduinoManager
 from core.lcd.lcd_controller import LCDController, ButtonReader
 
 class PingPongGame(BaseGame):
-    """Juego Ping Pong que implementa BaseGame"""
+    """Ping Pong que implementa BaseGame"""
 
     def __init__(self, arduino_manager: ArduinoManager):
         super().__init__(arduino_manager)
