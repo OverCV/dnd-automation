@@ -1,3 +1,4 @@
+pyfirmata
 pygame
 numpy
 matplotlib
