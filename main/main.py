@@ -21,7 +21,7 @@ except ImportError:
 from core.arduino_manager import ArduinoManager
 from games.ping_pong.ping_pong import PingPongGame
 from games.two_lanes.two_lanes import TwoLaneRunnerGame
-
+# from games.simon.simon import SimonSaysGame
 
 class GameManager:
     """Gestor principal de juegos"""
@@ -32,6 +32,7 @@ class GameManager:
         self.available_games = {
             'ping_pong': PingPongGame,
             'two_lane_runner': TwoLaneRunnerGame,
+            # 'simon': SimonSaysGame,
             # Aquí puedes agregar más juegos que implementen BaseGame
             # 'tetris': TetrisGame,
             # 'snake': SnakeGame,

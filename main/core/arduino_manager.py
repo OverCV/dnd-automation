@@ -16,7 +16,7 @@ class ArduinoManager:
         return cls._instance
 
     def __init__(self):
-        if self.initialized:
+        if hasattr(self, 'initialized') and self.initialized:
             return
 
         self.board = None
@@ -76,3 +76,27 @@ class ArduinoManager:
                 ['ARDUINO', 'CH340', 'CH341', 'CP210', 'FTDI']):
                 return port.device
         return None
+
+    def read_button(self) -> Optional[str]:
+        """
+        Reads a line from the serial port, expecting a button press character.
+        This method assumes the Arduino sketch sends button data followed by a newline.
+        """
+        if not self.connected or not self.board or not hasattr(self.board, 'sp'):
+            # print("⚠️ Cannot read button: Arduino not connected or serial port not available.")
+            return None
+        try:
+            # Check if there's data waiting to avoid blocking if readline times out
+            if self.board.sp.in_waiting > 0:
+                line = self.board.sp.readline().decode('utf-8', errors='ignore').strip()
+                if line:  # Ensure we got something
+                    return line
+            return None
+        except serial.SerialException as se:
+            print(f"🔌 SerialException while reading button: {se}. Arduino might be disconnected.")
+            # Consider the connection lost if a serial exception occurs during read
+            self.disconnect() # Attempt to clean up
+            return None
+        except Exception as e:
+            print(f"❌ Error reading button: {e}")
+            return None
