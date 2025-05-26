@@ -2,7 +2,7 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 from core.base_game import BaseGame
-from typing import Optional, Type, Dict
+from typing import Optional, Dict
 from core.arduino_manager import ArduinoManager
 from games.ping_pong.ping_pong import PingPongGame
 from games.two_lanes.two_lanes import TwoLaneRunnerGame

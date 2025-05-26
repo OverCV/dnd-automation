@@ -6,11 +6,13 @@ from abc import ABC, abstractmethod
 
 from core.base_game import BaseGame
 from core.arduino_manager import ArduinoManager
-
 from core.lcd.lcd_controller import LCDController, ButtonReader
+from core.game_logger import GameLogger
+
+from games.ping_pong.ping_pong_pygame_renderer import PingPongPygameRenderer
 
 class PingPongGame(BaseGame):
-    """Ping Pong que implementa BaseGame"""
+    """Ping Pong que implementa BaseGame con sistema de logging"""
 
     def __init__(self, arduino_manager: ArduinoManager):
         super().__init__(arduino_manager)
@@ -21,14 +23,13 @@ class PingPongGame(BaseGame):
         self.name = "Ping Pong"
         self.description = "Juego clásico de Ping Pong con LCD y botones"
 
+        # Inicializar componentes separados
+        self.logger = GameLogger("PingPongGame")
+        self.renderer = PingPongPygameRenderer()
+
         # Componentes del juego
         self.lcd = None
         self.buttons = None
-
-        # Pygame components
-        self.screen = None
-        self.clock = None
-        self.pygame_initialized = False
 
         # Variables del juego
         self.LCD_WIDTH = 16
@@ -49,56 +50,44 @@ class PingPongGame(BaseGame):
         self.last_button_time = time.time()
         self.button_debounce = 0.2
 
+        # Variables para estadísticas
+        self.game_start_time = None
+        self.total_hits = 0
+        self.left_paddle_hits = 0
+        self.right_paddle_hits = 0
+
     def initialize_hardware(self) -> bool:
         """Inicializar hardware específico del juego"""
         try:
             if not self.arduino.connected:
+                self.logger.log_game_event("HARDWARE", "Arduino no conectado", "ERROR")
                 print("❌ Arduino no conectado")
                 return False
 
+            self.logger.log_game_event("HARDWARE", "Inicializando hardware Ping Pong...")
             print("🎮 Inicializando hardware Ping Pong...")
 
             # Inicializar LCD
             self.lcd = LCDController(self.arduino)
+            self.logger.log_game_event("HARDWARE", "LCD inicializado correctamente")
             print("✅ LCD inicializado")
 
             # Inicializar botones
             self.buttons = ButtonReader(self.arduino)
+            self.logger.log_game_event("HARDWARE", "Botones inicializados correctamente")
             print("✅ Botones inicializados")
 
             # Inicializar Pygame
-            self._initialize_pygame()
+            self.renderer.initialize()
+            self.logger.log_game_event("HARDWARE", "Pygame inicializado correctamente")
             print("✅ Pygame inicializado")
 
             return True
 
         except Exception as e:
+            self.logger.log_game_event("HARDWARE", f"Error inicializando hardware: {e}", "ERROR")
             print(f"❌ Error inicializando hardware: {e}")
             return False
-
-    def _initialize_pygame(self):
-        """Inicializar componentes de Pygame"""
-        if not self.pygame_initialized:
-            pygame.init()
-            self.screen_width = 800
-            self.screen_height = 600
-            self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
-            pygame.display.set_caption("Ping Pong - Arduino + Python")
-
-            # Fuentes y colores
-            self.font_large = pygame.font.Font(None, 48)
-            self.font_medium = pygame.font.Font(None, 32)
-            self.font_small = pygame.font.Font(None, 24)
-
-            self.BLACK = (0, 0, 0)
-            self.WHITE = (255, 255, 255)
-            self.GREEN = (0, 255, 0)
-            self.BLUE = (0, 100, 255)
-            self.RED = (255, 100, 100)
-            self.YELLOW = (255, 255, 0)
-
-            self.clock = pygame.time.Clock()
-            self.pygame_initialized = True
 
     def start_game(self) -> bool:
         """Iniciar juego"""
@@ -108,6 +97,10 @@ class PingPongGame(BaseGame):
 
             self.running = True
             self._reset_game_state()
+
+            # Registrar inicio del juego
+            self.game_start_time = time.time()
+            self.logger.log_game_event("GAME", "🎮 Juego iniciado - Esperando al jugador...")
 
             # Mostrar pantalla de bienvenida
             self._show_welcome_screen()
@@ -120,12 +113,14 @@ class PingPongGame(BaseGame):
             return True
 
         except Exception as e:
+            self.logger.log_game_event("GAME", f"Error iniciando juego: {e}", "ERROR")
             print(f"❌ Error iniciando juego: {e}")
             return False
 
     def stop_game(self):
         """Detener juego"""
         try:
+            self.logger.log_game_event("GAME", "🛑 Deteniendo juego...")
             print("🛑 Deteniendo Ping Pong...")
             self.running = False
 
@@ -135,13 +130,17 @@ class PingPongGame(BaseGame):
             if self.lcd:
                 self.lcd.clear()
 
-            if self.pygame_initialized:
-                pygame.quit()
-                self.pygame_initialized = False
+            self.renderer.quit()
+
+            # Log final del juego
+            if self.game_start_time:
+                total_duration = time.time() - self.game_start_time
+                self.logger.log_game_event("GAME", f"✅ Juego detenido - Duración total: {total_duration:.2f}s")
 
             print("✅ Ping Pong detenido")
 
         except Exception as e:
+            self.logger.log_game_event("GAME", f"Error deteniendo juego: {e}", "ERROR")
             print(f"❌ Error deteniendo juego: {e}")
 
     def get_game_status(self) -> Dict[str, Any]:
@@ -155,7 +154,9 @@ class PingPongGame(BaseGame):
             'ball_position': (self.ball_x, self.ball_y),
             'left_paddle': self.left_paddle_active,
             'right_paddle': self.right_paddle_active,
-            'hardware_initialized': self.lcd is not None and self.buttons is not None
+            'hardware_initialized': self.lcd is not None and self.buttons is not None,
+            'total_hits': self.total_hits,
+            'game_duration': time.time() - self.game_start_time if self.game_start_time else 0
         }
 
     def _reset_game_state(self):
@@ -172,6 +173,13 @@ class PingPongGame(BaseGame):
         self.game_speed = 0.3
         self.last_move_time = time.time()
 
+        # Reset estadísticas
+        self.total_hits = 0
+        self.left_paddle_hits = 0
+        self.right_paddle_hits = 0
+
+        self.logger.log_game_event("GAME", "🔄 Estado del juego reseteado")
+
     def _show_welcome_screen(self):
         """Mostrar pantalla de bienvenida"""
         if self.lcd:
@@ -180,6 +188,8 @@ class PingPongGame(BaseGame):
             self.lcd.print("PING PONG")
             self.lcd.set_cursor(0, 1)
             self.lcd.print("Press any button")
+
+        self.logger.log_game_event("UI", "Pantalla de bienvenida mostrada")
 
     def _game_loop(self):
         """Loop principal del juego"""
@@ -190,12 +200,31 @@ class PingPongGame(BaseGame):
             return
 
         self._reset_game_state()
+        self.logger.log_game_event("GAME", "🎯 Gameplay iniciado - Pelota en movimiento")
         self._draw_game()
 
         while self.running:
             try:
                 # Procesar eventos de Pygame
-                self._handle_pygame_events()
+                continue_game, action = self.renderer.handle_events()
+                if not continue_game:
+                    self.logger.log_game_event("INPUT", f"Salida solicitada: {action}")
+                    self.running = False
+                    break
+
+                # Manejar acciones de Pygame
+                if action == "RESET" and self.game_over:
+                    self.logger.log_game_event("INPUT", "Reset solicitado desde Pygame")
+                    self._reset_game_state()
+                    self._draw_game()
+                elif action == "PAUSE" and not self.game_over:
+                    self.game_paused = not self.game_paused
+                    if self.game_paused:
+                        self.logger.log_game_event("INPUT", "Pausa solicitada desde Pygame")
+                        self._show_pause_screen()
+                    else:
+                        self.logger.log_game_event("INPUT", "Reanudación solicitada desde Pygame")
+                        self._draw_game()
 
                 # Leer botones del Arduino
                 self._read_buttons()
@@ -204,33 +233,34 @@ class PingPongGame(BaseGame):
                 self._update_game()
 
                 # Dibujar visualización
-                if self.pygame_initialized:
-                    self._draw_pygame_visualization()
-                    pygame.display.flip()
-                    self.clock.tick(60)
+                self._update_visualization()
 
                 time.sleep(0.01)  # Pequeña pausa para no saturar
 
             except Exception as e:
+                self.logger.log_game_event("GAME", f"Error en loop del juego: {e}", "ERROR")
                 print(f"❌ Error en loop del juego: {e}")
                 break
 
     def _wait_for_start_button(self):
         """Esperar que se presione un botón para comenzar"""
+        self.logger.log_game_event("INPUT", "Esperando botón de inicio...")
+
         while self.running:
             if self.buttons:
                 button = self.buttons.read_button()
                 if button != 'NONE':
+                    self.logger.log_game_event("INPUT", f"Botón de inicio presionado: {button}")
                     time.sleep(0.3)  # Debounce
                     break
 
             # Procesar eventos de Pygame para no bloquear la ventana
-            if self.pygame_initialized:
-                self._handle_pygame_events()
-                self._draw_pygame_visualization()
-                pygame.display.flip()
-                self.clock.tick(60)
+            continue_game, _ = self.renderer.handle_events()
+            if not continue_game:
+                self.running = False
+                break
 
+            self._update_visualization()
             time.sleep(0.05)
 
     def _read_buttons(self):
@@ -248,20 +278,33 @@ class PingPongGame(BaseGame):
             self.last_button_time = current_time
 
             if button == 'LEFT':
-                self.left_paddle_active = True
+                if not self.left_paddle_active:
+                    self.left_paddle_active = True
+                    self.logger.log_game_event("INPUT", "Pala izquierda ACTIVADA")
             elif button == 'RIGHT':
-                self.right_paddle_active = True
+                if not self.right_paddle_active:
+                    self.right_paddle_active = True
+                    self.logger.log_game_event("INPUT", "Pala derecha ACTIVADA")
             elif button == 'SELECT':
                 if self.game_over:
+                    self.logger.log_game_event("GAME", "🔄 Reinicio solicitado por jugador")
                     self._reset_game_state()
                     self._draw_game()
                 else:
                     self.game_paused = not self.game_paused
                     if self.game_paused:
+                        self.logger.log_game_event("GAME", "⏸️ Juego PAUSADO por jugador")
                         self._show_pause_screen()
                     else:
+                        self.logger.log_game_event("GAME", "▶️ Juego REANUDADO por jugador")
                         self._draw_game()
         else:
+            # Log cuando las palas se desactivan
+            if self.left_paddle_active:
+                self.logger.log_game_event("INPUT", "Pala izquierda DESACTIVADA")
+            if self.right_paddle_active:
+                self.logger.log_game_event("INPUT", "Pala derecha DESACTIVADA")
+
             self.left_paddle_active = False
             self.right_paddle_active = False
 
@@ -276,17 +319,26 @@ class PingPongGame(BaseGame):
 
         self.last_move_time = current_time
 
+        # Guardar posición anterior para logging
+        old_x, old_y = self.ball_x, self.ball_y
+
         # Mover pelota
         self.ball_x += self.ball_dx
         self.ball_y += self.ball_dy
+
+        # Log movimiento de pelota (solo ocasionalmente para no saturar)
+        if self.score % 3 == 0 or abs(self.ball_x - old_x) > 1:
+            self.logger.log_game_event("BALL", f"Pelota movida de ({old_x}, {old_y}) a ({self.ball_x}, {self.ball_y})")
 
         # Colisiones verticales
         if self.ball_y < 0:
             self.ball_y = 0
             self.ball_dy = -self.ball_dy
+            self.logger.log_game_event("COLLISION", "Rebote vertical - techo")
         elif self.ball_y >= self.LCD_HEIGHT:
             self.ball_y = self.LCD_HEIGHT - 1
             self.ball_dy = -self.ball_dy
+            self.logger.log_game_event("COLLISION", "Rebote vertical - suelo")
 
         # Colisiones horizontales
         if self.ball_x <= 0:
@@ -294,25 +346,46 @@ class PingPongGame(BaseGame):
                 self.ball_x = 1
                 self.ball_dx = -self.ball_dx
                 self.score += 1
+                self.total_hits += 1
+                self.left_paddle_hits += 1
+                self.logger.log_game_event("HIT", f"🏓 GOLPE EXITOSO con pala IZQUIERDA - Nuevo score: {self.score}")
             else:
-                self.game_over = True
-                self._show_game_over("Left miss!")
+                self._handle_game_over("LEFT", "Pala izquierda no estaba activa")
                 return
         elif self.ball_x >= self.LCD_WIDTH - 1:
             if self.right_paddle_active:
                 self.ball_x = self.LCD_WIDTH - 2
                 self.ball_dx = -self.ball_dx
                 self.score += 1
+                self.total_hits += 1
+                self.right_paddle_hits += 1
+                self.logger.log_game_event("HIT", f"🏓 GOLPE EXITOSO con pala DERECHA - Nuevo score: {self.score}")
             else:
-                self.game_over = True
-                self._show_game_over("Right miss!")
+                self._handle_game_over("RIGHT", "Pala derecha no estaba activa")
                 return
 
         # Aumentar velocidad gradualmente
         if self.score > 0 and self.score % 5 == 0:
+            old_speed = self.game_speed
             self.game_speed = max(0.1, self.game_speed - 0.02)
+            if old_speed != self.game_speed:
+                self.logger.log_game_event("SPEED", f"⚡ Velocidad aumentada de {old_speed:.2f}s a {self.game_speed:.2f}s")
 
         self._draw_game()
+
+    def _handle_game_over(self, side: str, reason: str):
+        """Manejar el game over"""
+        game_duration = time.time() - self.game_start_time if self.game_start_time else 0
+
+        self.logger.log_player_death_ping_pong(
+            reason, side, self.score, self.total_hits,
+            self.left_paddle_hits, self.right_paddle_hits,
+            game_duration, self.game_speed
+        )
+
+        self.game_over = True
+        message = f"{side.capitalize()} miss!"
+        self._show_game_over(message)
 
     def _draw_game(self):
         """Dibujar estado del juego en LCD"""
@@ -363,106 +436,14 @@ class PingPongGame(BaseGame):
             self.lcd.set_cursor(0, 1)
             self.lcd.print(f"{message} S:{self.score}")
 
-    def _draw_pygame_visualization(self):
-        """Dibujar visualización en Pygame"""
-        if not self.pygame_initialized:
-            return
+        self.logger.log_game_event("GAME", f"💀 GAME OVER mostrado: {message}")
 
-        self.screen.fill(self.BLACK)
-
-        # Título
-        title = self.font_large.render("Ping Pong - Arduino + Python", True, self.WHITE)
-        title_rect = title.get_rect(center=(self.screen_width // 2, 50))
-        self.screen.blit(title, title_rect)
-
-        # Simulación del LCD
-        lcd_width = 640
-        lcd_height = 160
-        lcd_x = (self.screen_width - lcd_width) // 2
-        lcd_y = 120
-
-        # Marco del LCD
-        pygame.draw.rect(self.screen, self.GREEN, (lcd_x - 5, lcd_y - 5, lcd_width + 10, lcd_height + 10), 3)
-        pygame.draw.rect(self.screen, self.BLACK, (lcd_x, lcd_y, lcd_width, lcd_height))
-
-        # Grid del LCD
-        char_width = lcd_width // self.LCD_WIDTH
-        char_height = lcd_height // self.LCD_HEIGHT
-
-        # Dibujar caracteres
-        for y in range(self.LCD_HEIGHT):
-            for x in range(self.LCD_WIDTH):
-                char_x = lcd_x + x * char_width
-                char_y = lcd_y + y * char_height
-
-                # Pelota
-                if x == self.ball_x and y == self.ball_y:
-                    pygame.draw.circle(self.screen, self.WHITE,
-                                     (char_x + char_width//2, char_y + char_height//2),
-                                     min(char_width, char_height)//3)
-
-                # Palas
-                if x == 0 and self.left_paddle_active:
-                    pygame.draw.rect(self.screen, self.BLUE,
-                                   (char_x, char_y, char_width//3, char_height))
-                elif x == self.LCD_WIDTH - 1 and self.right_paddle_active:
-                    pygame.draw.rect(self.screen, self.BLUE,
-                                   (char_x + 2*char_width//3, char_y, char_width//3, char_height))
-
-        # Información del juego
-        info_y = 320
-        score_text = self.font_medium.render(f"Puntuación: {self.score}", True, self.YELLOW)
-        self.screen.blit(score_text, (50, info_y))
-
-        # Estado del juego
-        if self.game_over:
-            status = "GAME OVER - Presiona SELECT para reiniciar"
-            color = self.RED
-        elif self.game_paused:
-            status = "PAUSADO - Presiona SELECT para continuar"
-            color = self.YELLOW
-        else:
-            status = "JUGANDO - LEFT/RIGHT para palas, SELECT para pausar"
-            color = self.GREEN
-
-        status_text = self.font_medium.render(status, True, color)
-        status_rect = status_text.get_rect(center=(self.screen_width // 2, info_y + 40))
-        self.screen.blit(status_text, status_rect)
-
-        # Estado de palas
-        left_status = "ACTIVA" if self.left_paddle_active else "INACTIVA"
-        right_status = "ACTIVA" if self.right_paddle_active else "INACTIVA"
-
-        left_color = self.GREEN if self.left_paddle_active else self.RED
-        right_color = self.GREEN if self.right_paddle_active else self.RED
-
-        left_text = self.font_small.render(f"Pala Izq: {left_status}", True, left_color)
-        right_text = self.font_small.render(f"Pala Der: {right_status}", True, right_color)
-
-        self.screen.blit(left_text, (50, info_y + 80))
-        self.screen.blit(right_text, (50, info_y + 110))
-
-        # Información de conexión
-        conn_text = self.font_small.render("✅ Arduino conectado con Firmata", True, self.GREEN)
-        self.screen.blit(conn_text, (50, info_y + 150))
-
-    def _handle_pygame_events(self):
-        """Manejar eventos de Pygame"""
-        if not self.pygame_initialized:
-            return
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.running = False
-                elif event.key == pygame.K_r and self.game_over:
-                    self._reset_game_state()
-                    self._draw_game()
-                elif event.key == pygame.K_p and not self.game_over:
-                    self.game_paused = not self.game_paused
-                    if self.game_paused:
-                        self._show_pause_screen()
-                    else:
-                        self._draw_game()
+    def _update_visualization(self):
+        """Actualizar visualización en Pygame"""
+        self.renderer.draw_game(
+            self.ball_x, self.ball_y,
+            self.left_paddle_active, self.right_paddle_active,
+            self.score, self.game_over, self.game_paused,
+            self.total_hits, self.left_paddle_hits, self.right_paddle_hits
+        )
+        self.renderer.update_display()
