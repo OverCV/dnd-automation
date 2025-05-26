@@ -6,7 +6,8 @@ from typing import Optional, Dict
 from core.arduino_manager import ArduinoManager
 from games.ping_pong.ping_pong import PingPongGame
 from games.two_lanes.two_lanes import TwoLaneRunnerGame
-from games.piano.piano import PianoDigitalGame
+from games.piano.piano import PianoSimonGame
+# from games.simon.simon import
 
 class GameController:
     def __init__(self, arduino_manager: ArduinoManager, main_window):
@@ -19,7 +20,8 @@ class GameController:
         self.available_games = {
             'ping_pong': PingPongGame,
             'two_lane_runner': TwoLaneRunnerGame,
-            'piano_digital': PianoDigitalGame,
+            'piano_digital': PianoSimonGame,
+            # 'simon_says': SimonGame,
             # 'simon': SimonSaysGame,
             # Aquí puedes agregar más juegos que implementen BaseGame
             # 'tetris': TetrisGame,
@@ -30,6 +32,7 @@ class GameController:
             'ping_pong': "Juego de Ping Pong con dos palas y una pelota. Requiere sensores de movimiento.",
             'two_lane_runner': "Juego de carreras en dos carriles. Utiliza sensores de distancia para detectar obstáculos.",
             'piano_digital': "Piano digital con teclas táctiles. Requiere sensores capacitivos.",
+            'simon_says': "Juego de memoria Simon Says con 6 LEDs y keypad 4x4. Comunicación serial directa.",
             # 'simon': "Juego de Simon Says con luces y sonidos. Utiliza LEDs y buzzer.",
             # 'tetris': "Juego clásico de Tetris. Requiere pantalla LCD y botones.",
             # 'snake': "Juego clásico de Snake. Utiliza pantalla OLED y joystick.",

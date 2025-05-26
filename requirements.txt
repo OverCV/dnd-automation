@@ -1,6 +1,7 @@
 pyfirmata
 pygame
 numpy
+pandas
 matplotlib
 
 cvzone

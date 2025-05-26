@@ -44,10 +44,21 @@ class PingPongPygameRenderer:
             self.initialized = True
 
     def quit(self):
-        """Cerrar Pygame"""
-        if self.initialized:
-            pygame.quit()
-            self.initialized = False
+        """Cerrar Pygame de forma segura"""
+        try:
+            if self.initialized:
+                pygame.display.quit()
+                pygame.quit()
+                self.initialized = False
+                print("✅ Pygame cerrado correctamente")
+        except Exception as e:
+            print(f"⚠️ Error cerrando Pygame: {e}")
+            # Forzar cierre si hay problemas
+            try:
+                pygame.quit()
+                self.initialized = False
+            except:
+                pass
 
     def draw_game(self, ball_x: int, ball_y: int, left_paddle_active: bool,
                   right_paddle_active: bool, score: int, game_over: bool,

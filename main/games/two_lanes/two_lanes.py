@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from core.base_game import BaseGame
 from core.arduino_manager import ArduinoManager
 from core.lcd.lcd_controller import LCDController, ButtonReader
+from core.game_logger import GameLogger
 
 class TwoLaneRunnerGame(BaseGame):
     """Two-Lane Runner que implementa BaseGame"""
@@ -22,6 +23,9 @@ class TwoLaneRunnerGame(BaseGame):
         self.name = "Two-Lane Runner"
         self.description = "Esquiva obstáculos corriendo entre dos carriles"
 
+        # Inicializar logger
+        self.logger = GameLogger("TwoLaneRunner")
+        
         # Componentes del juego
         self.lcd = None
         self.buttons = None
@@ -67,9 +71,12 @@ class TwoLaneRunnerGame(BaseGame):
         self.player_animation_offset = 0
         self.background_scroll = 0
 
-        # Estadísticas
+        # Estadísticas y tiempo
         self.total_games = 0
         self.best_score = 0
+        self.game_start_time = None
+        self.total_lane_changes = 0
+        self.obstacles_dodged = 0
 
         # Colores
         self.BLACK = (0, 0, 0)
@@ -88,30 +95,37 @@ class TwoLaneRunnerGame(BaseGame):
         """Inicializar hardware específico del juego"""
         try:
             if not self.arduino.connected:
+                self.logger.log_game_event("HARDWARE", "Arduino no conectado", "ERROR")
                 print("❌ Arduino no conectado")
                 return False
 
+            self.logger.log_game_event("HARDWARE", "Inicializando hardware Two-Lane Runner...")
             print("🏃 Inicializando hardware Two-Lane Runner...")
 
             # Inicializar LCD
             self.lcd = LCDController(self.arduino)
+            self.logger.log_game_event("HARDWARE", "LCD inicializado correctamente")
             print("✅ LCD inicializado")
 
             # Crear caracteres personalizados específicos del juego
             self._create_custom_characters()
+            self.logger.log_game_event("HARDWARE", "Caracteres personalizados creados")
             print("✅ Caracteres personalizados creados")
 
             # Inicializar botones
             self.buttons = ButtonReader(self.arduino)
+            self.logger.log_game_event("HARDWARE", "Botones inicializados correctamente")
             print("✅ Botones inicializados")
 
             # Inicializar Pygame
             self._initialize_pygame()
+            self.logger.log_game_event("HARDWARE", "Pygame inicializado correctamente")
             print("✅ Pygame inicializado")
 
             return True
 
         except Exception as e:
+            self.logger.log_game_event("HARDWARE", f"Error inicializando hardware: {e}", "ERROR")
             print(f"❌ Error inicializando hardware: {e}")
             return False
 
@@ -183,6 +197,10 @@ class TwoLaneRunnerGame(BaseGame):
             self.running = True
             self._reset_game_state()
 
+            # Registrar inicio del juego
+            self.game_start_time = time.time()
+            self.logger.log_game_event("GAME", "🏃 Juego iniciado - Esperando al jugador...")
+
             # Mostrar pantalla de bienvenida
             self._show_welcome_screen()
 
@@ -194,12 +212,14 @@ class TwoLaneRunnerGame(BaseGame):
             return True
 
         except Exception as e:
+            self.logger.log_game_event("GAME", f"Error iniciando juego: {e}", "ERROR")
             print(f"❌ Error iniciando juego: {e}")
             return False
 
     def stop_game(self):
         """Detener juego"""
         try:
+            self.logger.log_game_event("GAME", "🛑 Deteniendo juego...")
             print("🛑 Deteniendo Two-Lane Runner...")
             self.running = False
 
@@ -210,12 +230,28 @@ class TwoLaneRunnerGame(BaseGame):
                 self.lcd.clear()
 
             if self.pygame_initialized:
-                pygame.quit()
-                self.pygame_initialized = False
+                try:
+                    pygame.display.quit()
+                    pygame.quit()
+                    self.pygame_initialized = False
+                    self.logger.log_game_event("HARDWARE", "Pygame cerrado correctamente")
+                except Exception as e:
+                    self.logger.log_game_event("HARDWARE", f"Error cerrando Pygame: {e}", "WARNING")
+                    try:
+                        pygame.quit()
+                        self.pygame_initialized = False
+                    except:
+                        pass
+
+            # Log final del juego
+            if self.game_start_time:
+                total_duration = time.time() - self.game_start_time
+                self.logger.log_game_event("GAME", f"✅ Juego detenido - Duración total: {total_duration:.2f}s")
 
             print("✅ Two-Lane Runner detenido")
 
         except Exception as e:
+            self.logger.log_game_event("GAME", f"Error deteniendo juego: {e}", "ERROR")
             print(f"❌ Error deteniendo juego: {e}")
 
     def get_game_status(self) -> Dict[str, Any]:
@@ -246,6 +282,12 @@ class TwoLaneRunnerGame(BaseGame):
         self.obstacles = []
         self.scroll_counter = 0
         self.last_move_time = time.time()
+        
+        # Reset estadísticas
+        self.total_lane_changes = 0
+        self.obstacles_dodged = 0
+        
+        self.logger.log_game_event("GAME", "🔄 Estado del juego reseteado")
 
     def _show_welcome_screen(self):
         """Mostrar pantalla de bienvenida"""
@@ -255,6 +297,8 @@ class TwoLaneRunnerGame(BaseGame):
             self.lcd.print("TWO LANES")
             self.lcd.set_cursor(0, 1)
             self.lcd.print("Press any button")
+        
+        self.logger.log_game_event("UI", "Pantalla de bienvenida mostrada")
 
     def _game_loop(self):
         """Loop principal del juego"""
@@ -265,6 +309,7 @@ class TwoLaneRunnerGame(BaseGame):
             return
 
         self._reset_game_state()
+        self.logger.log_game_event("GAME", "🎯 Gameplay iniciado - Jugador en movimiento")
         self._draw_game()
 
         while self.running:
@@ -287,15 +332,19 @@ class TwoLaneRunnerGame(BaseGame):
                 time.sleep(0.01)
 
             except Exception as e:
+                self.logger.log_game_event("GAME", f"Error en loop del juego: {e}", "ERROR")
                 print(f"❌ Error en loop del juego: {e}")
                 break
 
     def _wait_for_start_button(self):
         """Esperar que se presione un botón para comenzar"""
+        self.logger.log_game_event("INPUT", "Esperando botón de inicio...")
+        
         while self.running:
             if self.buttons:
                 button = self.buttons.read_button()
                 if button != 'NONE':
+                    self.logger.log_game_event("INPUT", f"Botón de inicio presionado: {button}")
                     time.sleep(0.3)
                     break
 
@@ -323,19 +372,31 @@ class TwoLaneRunnerGame(BaseGame):
 
             if button == 'UP':
                 if not self.game_over and not self.game_paused:
+                    old_y = self.player_y
                     self.player_y = 0
+                    if old_y != self.player_y:
+                        self.total_lane_changes += 1
+                        self.logger.log_game_event("INPUT", f"Jugador cambió al carril SUPERIOR (total cambios: {self.total_lane_changes})")
             elif button == 'DOWN':
                 if not self.game_over and not self.game_paused:
+                    old_y = self.player_y
                     self.player_y = 1
+                    if old_y != self.player_y:
+                        self.total_lane_changes += 1
+                        self.logger.log_game_event("INPUT", f"Jugador cambió al carril INFERIOR (total cambios: {self.total_lane_changes})")
+
             elif button == 'SELECT':
                 if self.game_over:
+                    self.logger.log_game_event("GAME", "🔄 Reinicio solicitado por jugador")
                     self._reset_game_state()
                     self._draw_game()
                 else:
                     self.game_paused = not self.game_paused
                     if self.game_paused:
+                        self.logger.log_game_event("GAME", "⏸️ Juego PAUSADO por jugador")
                         self._show_pause_screen()
                     else:
+                        self.logger.log_game_event("GAME", "▶️ Juego REANUDADO por jugador")
                         self._draw_game()
 
     def _update_game(self):
@@ -355,18 +416,21 @@ class TwoLaneRunnerGame(BaseGame):
 
             # Verificar colisión con jugador
             if obstacle['x'] == self.PLAYER_X and obstacle['y'] == self.player_y:
-                self.game_over = True
-                self._show_game_over()
+                self._handle_collision(obstacle)
                 return
 
             # Remover obstáculos que salen de pantalla y aumentar puntuación
             if obstacle['x'] < 0:
                 self.obstacles.remove(obstacle)
                 self.score += 1
+                self.obstacles_dodged += 1
+                self.logger.log_game_event("SCORE", f"🎯 Obstáculo esquivado - Score: {self.score} | Total esquivados: {self.obstacles_dodged}")
 
                 # Aumentar velocidad cada 10 puntos
                 if self.score % 10 == 0:
+                    old_speed = self.game_speed
                     self.game_speed = max(self.MIN_SPEED, self.game_speed - 0.03)
+                    self.logger.log_game_event("SPEED", f"⚡ Velocidad aumentada de {old_speed:.2f}s a {self.game_speed:.2f}s")
 
         # Generar nuevos obstáculos
         self.scroll_counter += 1
@@ -375,6 +439,24 @@ class TwoLaneRunnerGame(BaseGame):
             self._generate_new_obstacle()
 
         self._draw_game()
+    
+    def _handle_collision(self, obstacle):
+        """Manejar colisión con obstáculo"""
+        game_duration = time.time() - self.game_start_time if self.game_start_time else 0
+        lane_name = "SUPERIOR" if self.player_y == 0 else "INFERIOR"
+        
+        self.logger.log_player_death_two_lanes(
+            reason="Colisión con obstáculo",
+            lane=lane_name,
+            final_score=self.score,
+            obstacles_dodged=self.obstacles_dodged,
+            lane_changes=self.total_lane_changes,
+            game_duration=game_duration,
+            game_speed=self.game_speed
+        )
+        
+        self.game_over = True
+        self._show_game_over()
 
     def _generate_new_obstacle(self):
         """Generar nuevo obstáculo asegurando que siempre haya un carril libre"""
@@ -394,6 +476,12 @@ class TwoLaneRunnerGame(BaseGame):
         # Crear nuevo obstáculo
         new_obstacle = {'x': self.LCD_WIDTH - 1, 'y': new_y}
         self.obstacles.append(new_obstacle)
+        
+        # Log de nuevo obstáculo ocasionalmente
+        if len(self.obstacles) % 3 == 0:
+            lane_name = "SUPERIOR" if new_y == 0 else "INFERIOR"
+            self.logger.log_game_event("OBSTACLE", f"🚧 Nuevo obstáculo generado en carril {lane_name} (total activos: {len(self.obstacles)})")
+
 
     def _draw_game(self):
         """Dibujar estado del juego en LCD"""
@@ -439,6 +527,8 @@ class TwoLaneRunnerGame(BaseGame):
         self.total_games += 1
         if self.score > self.best_score:
             self.best_score = self.score
+            
+        self.logger.log_game_event("GAME", f"💀 GAME OVER mostrado - Score final: {self.score}")
 
     def _draw_pygame_visualization(self):
         """Dibujar visualización completa en Pygame"""
@@ -659,20 +749,36 @@ class TwoLaneRunnerGame(BaseGame):
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
+                self.logger.log_game_event("INPUT", "Salida solicitada desde Pygame")
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
+                    self.logger.log_game_event("INPUT", "Escape presionado - saliendo del juego")
                     self.running = False
                 elif event.key == pygame.K_r and self.game_over:
+                    self.logger.log_game_event("INPUT", "Reset solicitado desde Pygame")
                     self._reset_game_state()
                     self._draw_game()
                 elif event.key == pygame.K_p and not self.game_over:
                     self.game_paused = not self.game_paused
                     if self.game_paused:
+                        self.logger.log_game_event("INPUT", "Pausa solicitada desde Pygame")
                         self._show_pause_screen()
                     else:
+                        self.logger.log_game_event("INPUT", "Reanudación solicitada desde Pygame")
                         self._draw_game()
                 elif event.key == pygame.K_UP and not self.game_over and not self.game_paused:
+                    old_y = self.player_y
                     self.player_y = 0
+                    if old_y != self.player_y:
+                        self.total_lane_changes += 1
+                        self.logger.log_game_event("INPUT", f"Tecla UP - Carril SUPERIOR (Pygame - total cambios: {self.total_lane_changes})")
                 elif event.key == pygame.K_DOWN and not self.game_over and not self.game_paused:
+                    old_y = self.player_y
                     self.player_y = 1
+                    if old_y != self.player_y:
+                        self.total_lane_changes += 1
+                        self.logger.log_game_event("INPUT", f"Tecla DOWN - Carril INFERIOR (Pygame - total cambios: {self.total_lane_changes})")
+
+        # Manejar cierre de ventana correctamente
+        return True

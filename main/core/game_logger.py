@@ -7,17 +7,10 @@ class GameLogger:
     """Manejador de logging para el juego"""
 
     def __init__(self, game_name: str = "PingPongGame", log_dir: str = "main/data"):
-        self.clean_logs()
         self.game_name = game_name
         self.log_dir = log_dir
         self.logger = None
         self._setup_logging()
-
-    def clean_logs(self):
-        """Eliminar logs antiguos de la carpeta"""
-        for filename in os.listdir(self.log_dir):
-            if filename.endswith(".log"):
-                os.remove(os.path.join(self.log_dir, filename))
 
     def _setup_logging(self):
         """Configurar el sistema de logging"""
@@ -30,8 +23,9 @@ class GameLogger:
 
         # Evitar duplicar handlers si ya existen
         if not self.logger.handlers:
-            # Handler para archivo
-            log_file = os.path.join(self.log_dir, 'pingpong.log')
+            # Handler para archivo (nombre específico por juego)
+            log_filename = f"{self.game_name.lower().replace(' ', '_')}.log"
+            log_file = os.path.join(self.log_dir, log_filename)
             file_handler = logging.FileHandler(log_file, encoding='utf-8')
             file_handler.setLevel(logging.INFO)
 
@@ -79,6 +73,34 @@ class GameLogger:
             f"Final Score: {final_score} | Total Hits: {total_hits} | "
             f"Left Hits: {left_hits} | Right Hits: {right_hits} | "
             f"Game Duration: {game_duration:.2f}s | Speed: {game_speed:.2f}s"
+        )
+
+        self.logger.error(death_message)
+        print(f"🎮 {death_message}")  # También mostrar en consola para eventos críticos
+
+    def log_player_death_simon(self, reason: str, final_level: int,
+                        sequences_completed: int, button_presses: int,
+                        mistakes: int, game_duration: float):
+        """Registrar muerte/victoria del jugador en Simon"""
+        death_message = (
+            f"💀 SIMON END 💀 | Reason: {reason} | Final Level: {final_level} | "
+            f"Sequences Completed: {sequences_completed} | Button Presses: {button_presses} | "
+            f"Mistakes: {mistakes} | Game Duration: {game_duration:.2f}s | "
+            f"Accuracy: {((button_presses - mistakes) / max(1, button_presses) * 100):.1f}%"
+        )
+
+        self.logger.error(death_message)
+        print(f"🎮 {death_message}")  # También mostrar en consola para eventos críticos
+
+    def log_player_death_two_lanes(self, death_reason: str, lane: str, final_score: int,
+                        obstacles_dodged: int, lane_changes: int,
+                        game_duration: float, game_speed: float):
+        """Registrar muerte/error especial del jugador en Two Lanes"""
+        death_message = (
+            f"💀 PLAYER DEATH 💀 | Reason: {death_reason} | Lane: {lane} | "
+            f"Final Score: {final_score} | Obstacles Dodged: {obstacles_dodged} | "
+            f"Lane Changes: {lane_changes} | Game Duration: {game_duration:.2f}s | "
+            f"Speed: {game_speed:.2f}s"
         )
 
         self.logger.error(death_message)
