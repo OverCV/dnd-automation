@@ -8,7 +8,6 @@ import sys
 
 
 class UIComponents:
-    """Clase para manejar todos los componentes de la interfaz"""
 
     def __init__(self, root, colors, arduino_controller):
         self.root = root

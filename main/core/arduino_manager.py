@@ -4,6 +4,11 @@ from pyfirmata import util
 from typing import Optional
 import serial.tools.list_ports
 
+import inspect
+if not hasattr(inspect, 'getargspec'):
+    inspect.getargspec = inspect.getfullargspec
+
+
 class ArduinoManager:
     """Gestor singleton del Arduino con Firmata"""
 
