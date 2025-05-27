@@ -7,7 +7,7 @@ from components import UIComponents
 class MainWindow:
     """Clase principal que maneja la ventana y coordina los componentes"""
 
-    # Paleta de colores Arduino
+    # Paleta de colores Arduino #
     COLORS = {
         "white": "#ffffff",
         "light_blue": "#4fccf3",
