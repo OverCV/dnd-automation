@@ -11,8 +11,8 @@ class InfoPanelComponent:
     """Componente pequeño - solo info de sesión"""
     
     def __init__(self):
-        # Configuración visual
-        self.rect = pygame.Rect(650, 450, 520, 250)
+        # Configuración visual - Posición más abajo para dar espacio a botones
+        self.rect = pygame.Rect(650, 220, 520, 220)  # Movido abajo y más pequeño
         self.colors = {
             'card': (45, 55, 75),
             'accent': (100, 200, 255),
@@ -31,11 +31,11 @@ class InfoPanelComponent:
         pygame.draw.rect(screen, self.colors['accent'], self.rect, 2)
         
         # Título
-        font_heading = pygame.font.Font(None, 36)
-        font_normal = pygame.font.Font(None, 24)
+        font_heading = pygame.font.Font(None, 32)
+        font_normal = pygame.font.Font(None, 22)
         
         title = font_heading.render("📊 Información Detallada", True, self.colors['text'])
-        screen.blit(title, (660, 460))
+        screen.blit(title, (660, 230))
         
         # Detalles de la sesión
         details = [
@@ -47,11 +47,11 @@ class InfoPanelComponent:
         ]
         
         # Renderizar detalles
-        y_pos = 500
+        y_pos = 265
         for detail in details:
             detail_surface = font_normal.render(detail, True, self.colors['text_gray'])
             screen.blit(detail_surface, (670, y_pos))
-            y_pos += 25
+            y_pos += 22
     
     def _draw_empty_panel(self, screen):
         """Dibujar panel vacío cuando no hay sesión seleccionada"""
@@ -60,11 +60,11 @@ class InfoPanelComponent:
         pygame.draw.rect(screen, self.colors['accent'], self.rect, 2)
         
         # Mensaje
-        font_heading = pygame.font.Font(None, 36)
-        font_normal = pygame.font.Font(None, 24)
+        font_heading = pygame.font.Font(None, 32)
+        font_normal = pygame.font.Font(None, 22)
         
         title = font_heading.render("📊 Información", True, self.colors['text'])
-        screen.blit(title, (660, 460))
+        screen.blit(title, (660, 230))
         
         empty_msg = font_normal.render("Selecciona una sesión para ver detalles", True, self.colors['text_gray'])
-        screen.blit(empty_msg, (670, 500)) 
+        screen.blit(empty_msg, (670, 265)) 

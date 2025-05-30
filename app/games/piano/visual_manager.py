@@ -544,11 +544,42 @@ class PianoVisualManager:
             self.clock.tick(60)
     
     def cerrar(self):
-        """Cerrar Pygame correctamente"""
-        if self.pygame_initialized:
-            pygame.quit()
-            self.pygame_initialized = False
-            print("✅ Pygame cerrado correctamente")
+        """Cerrar y limpiar recursos de Pygame de forma ROBUSTA"""
+        print("🧹 Limpiando recursos visuales...")
+        
+        try:
+            # Limpiar animaciones y partículas
+            self.key_animations = [0.0] * 8
+            self.key_highlights = [0.0] * 8
+            self.note_particles.clear()
+            
+            # Cerrar Pygame solo si está inicializado
+            if self.pygame_initialized:
+                if self.screen:
+                    # Llenar pantalla de negro antes de cerrar
+                    self.screen.fill((0, 0, 0))
+                    pygame.display.flip()
+                
+                # Cerrar Pygame limpiamente
+                pygame.quit()
+                self.pygame_initialized = False
+                self.screen = None
+                print("✅ Pygame cerrado correctamente")
+            
+        except Exception as e:
+            print(f"⚠️ Error cerrando visual manager: {e}")
+            # Forzar cierre si hay problemas
+            try:
+                pygame.quit()
+            except:
+                pass
+            finally:
+                self.pygame_initialized = False
+                self.screen = None
+    
+    def is_initialized(self) -> bool:
+        """¿Está el visual manager inicializado?"""
+        return self.pygame_initialized and self.screen is not None
     
     def reiniciar_animaciones(self):
         """Reiniciar todas las animaciones"""

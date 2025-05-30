@@ -85,7 +85,7 @@ class GamesSection:
         # Información del análisis cognitivo
         info_label = tk.Label(
             cognitive_frame,
-            text="💡 Los datos se guardan automáticamente al jugar Piano-Simon",
+            text="💡 Los datos se guardan automáticamente al jugar cualquier juego cognitivo",
             font=("Arial", 9),
             bg=self.colors.GREEN_MID,
             fg=self.colors.LIGHT_GRAY,
@@ -104,8 +104,8 @@ class GamesSection:
 
             print("🧠 Abriendo análisis cognitivo...")
 
-            # Crear y ejecutar pantalla
-            cognitive_screen = CognitiveScreen()
+            # Crear y ejecutar pantalla con arduino (no arduino_manager)
+            cognitive_screen = CognitiveScreen(self.game_controller.arduino)
             cognitive_screen.run()
 
         except ImportError:

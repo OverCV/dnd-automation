@@ -171,7 +171,9 @@ class AnalyticsManager:
             game_id,
             game_class,
         ) in self.main_window.game_controller.available_games.items():
-            temp_game = game_class(self.main_window.arduino_manager)
+            temp_game = game_class(
+                self.main_window.arduino_manager,
+            )
             stats_info += f"   • {temp_game.name}\n"
 
         stats_text = tk.Text(

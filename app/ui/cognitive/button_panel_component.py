@@ -31,50 +31,37 @@ class ButtonPanelComponent:
         self._create_buttons()
     
     def _create_buttons(self):
-        """Crear definiciones de botones"""
-        button_width = 200
+        """Crear botones en layout 2 filas x 3 columnas"""
+        button_width = 180
         button_height = 40
-        start_x = 980  # A la derecha
-        start_y = 100
+        start_x = 650  # Al lado derecho de la lista
+        start_y = 100  # Arriba
+        spacing_x = 190
+        spacing_y = 50
         
-        self.buttons = [
-            {
-                'rect': pygame.Rect(start_x, start_y, button_width, button_height),
-                'text': '📊 Dashboard',
-                'action': 'dashboard',
-                'color': self.colors['accent']
-            },
-            {
-                'rect': pygame.Rect(start_x, start_y + 60, button_width, button_height),
-                'text': '🧠 Análisis Fatiga',
-                'action': 'fatigue',
-                'color': self.colors['warning']
-            },
-            {
-                'rect': pygame.Rect(start_x, start_y + 120, button_width, button_height),
-                'text': '🔄 Comparar',
-                'action': 'compare',
-                'color': self.colors['success']
-            },
-            {
-                'rect': pygame.Rect(start_x, start_y + 200, button_width, button_height),
-                'text': '📁 Abrir Carpeta',
-                'action': 'folder',
-                'color': self.colors['card']
-            },
-            {
-                'rect': pygame.Rect(start_x, start_y + 260, button_width, button_height),
-                'text': '🔄 Actualizar',
-                'action': 'refresh',
-                'color': self.colors['card']
-            },
-            {
-                'rect': pygame.Rect(start_x, start_y + 340, button_width, button_height),
-                'text': '🚪 Volver',
-                'action': 'exit',
-                'color': self.colors['error']
-            }
+        # Layout: 2 filas x 3 columnas
+        buttons_config = [
+            # Fila 1
+            ('📊 Dashboard', 'dashboard', self.colors['accent'], 0, 0),
+            ('🧠 Análisis Fatiga', 'fatigue', self.colors['warning'], 1, 0),
+            ('🔄 Comparar', 'compare', self.colors['success'], 2, 0),
+            # Fila 2  
+            ('📁 Abrir Carpeta', 'folder', self.colors['card'], 0, 1),
+            ('🔄 Actualizar', 'refresh', self.colors['card'], 1, 1),
+            ('🚪 Volver', 'exit', self.colors['error'], 2, 1)
         ]
+        
+        self.buttons = []
+        for text, action, color, col, row in buttons_config:
+            x = start_x + col * spacing_x
+            y = start_y + row * spacing_y
+            
+            self.buttons.append({
+                'rect': pygame.Rect(x, y, button_width, button_height),
+                'text': text,
+                'action': action,
+                'color': color
+            })
     
     def handle_click(self, mouse_pos, message_manager) -> bool:
         """Manejar clics en botones"""
@@ -184,7 +171,7 @@ class ButtonPanelComponent:
     
     def draw(self, screen, mouse_pos):
         """Dibujar botones"""
-        font = pygame.font.Font(None, 24)
+        font = pygame.font.Font(None, 20)  # Fuente más pequeña para que quepa
         
         for button in self.buttons:
             # Color con hover effect

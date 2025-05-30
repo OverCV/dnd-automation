@@ -1,16 +1,13 @@
+"""
+Lógica del Piano-Simon - RESPONSABILIDAD ÚNICA
+Maneja reglas, estados y progresión del juego con MELODÍAS FAMOSAS
+"""
+
 import time
 import random
-import threading
-from typing import List, Dict, Any, Optional
 from enum import Enum
-
-# Importar logging cognitivo - SÚPER SIMPLE
-try:
-    from ...core.cognitive import SessionManager
-    COGNITIVE_LOGGING_AVAILABLE = True
-except ImportError:
-    COGNITIVE_LOGGING_AVAILABLE = False
-    print("⚠️ Logging cognitivo no disponible")
+from typing import List, Dict, Any, Callable, Optional, Tuple
+from core.cognitive.cognitive_logger import CognitiveLogger
 
 
 class GameState(Enum):
@@ -22,308 +19,317 @@ class GameState(Enum):
     LEVEL_COMPLETE = 5
 
 
-class PianoGameLogic:
-    """Maneja exclusivamente la lógica del juego Simon Says"""
+class MelodyLibrary:
+    """Biblioteca de melodías famosas adaptadas a 8 notas - DO RE MI FA SOL LA SI DO8"""
     
-    def __init__(self, enable_cognitive_logging: bool = False, patient_id: str = "default"):
-        # Constantes del juego Simon
-        self.MAX_LEVEL = 20
-        self.INITIAL_DELAY = 800  # ms entre notas en secuencia
-        self.MIN_DELAY = 300
-        self.START_DELAY = 1500
-        self.PLAYER_TIMEOUT = 5000  # 5 segundos para responder
-        
-        # Variables del juego Simon
-        self.game_sequence = []
-        self.player_level = 1
-        self.input_count = 0
+    def __init__(self):
+        # Mapeo de notas: 0=Do, 1=Re, 2=Mi, 3=Fa, 4=Sol, 5=La, 6=Si, 7=Do8
+        self.melodies = {
+            1: {
+                "name": "Frère Jacques",
+                "sequence": [0, 1, 2, 0]  # Do Re Mi Do
+            },
+            2: {
+                "name": "Himno de la Alegría",
+                "sequence": [2, 2, 3, 4, 4]  # Mi Mi Fa Sol Sol
+            },
+            3: {
+                "name": "Cumpleaños Feliz",
+                "sequence": [0, 0, 1, 0, 3, 2]  # Do Do Re Do Fa Mi
+            },
+            4: {
+                "name": "Mary Had a Little Lamb",
+                "sequence": [2, 1, 0, 1, 2, 2, 2]  # Mi Re Do Re Mi Mi Mi
+            },
+            5: {
+                "name": "Twinkle Twinkle",
+                "sequence": [0, 0, 4, 4, 5, 5, 4]  # Do Do Sol Sol La La Sol
+            },
+            6: {
+                "name": "Happy Birthday",
+                "sequence": [0, 0, 7, 5, 3, 2]  # Do Do Do8 La Fa Mi
+            },
+            7: {
+                "name": "Jingle Bells",
+                "sequence": [2, 2, 2, 2, 2, 3, 4, 1]  # Mi Mi Mi Mi Mi Fa Sol Re
+            },
+            8: {
+                "name": "London Bridge",
+                "sequence": [4, 3, 2, 3, 4, 4, 4]  # Sol Fa Mi Fa Sol Sol Sol
+            },
+            9: {
+                "name": "Old MacDonald",
+                "sequence": [0, 0, 0, 4, 5, 5, 4]  # Do Do Do Sol La La Sol
+            },
+            10: {
+                "name": "Final Challenge",
+                "sequence": [0, 2, 4, 5, 7, 5, 4, 2, 0]  # Do Mi Sol La Do8 La Sol Mi Do
+            }
+        }
+    
+    def get_melody_for_level(self, level: int) -> Tuple[str, List[int]]:
+        """Obtener melodía para un nivel específico"""
+        if level in self.melodies:
+            melody = self.melodies[level]
+            return melody["name"], melody["sequence"]
+        else:
+            # Fallback para niveles no definidos
+            return "Random Sequence", self._generate_random_sequence(level)
+    
+    def _generate_random_sequence(self, length: int) -> List[int]:
+        """Generar secuencia aleatoria como fallback"""
+        return [random.randint(0, 7) for _ in range(min(length, 8))]
+
+
+class PianoGameLogic:
+    """Lógica principal del Piano Simon con melodías famosas"""
+    
+    def __init__(self, enable_cognitive_logging: bool = True, patient_id: str = "default"):
+        # Estado del juego
         self.game_state = GameState.WAITING_TO_START
-        self.sequence_index = 0
-        self.last_sequence_time = 0
-        self.last_input_time = 0
+        self.player_level = 1
+        self.max_level = 10  # REDUCIDO de 20 a 10
+        
+        # Biblioteca de melodías
+        self.melody_library = MelodyLibrary()
+        
+        # Secuencia actual
+        self.game_sequence = []
+        self.current_melody_name = ""
+        self.player_input = []
+        self.input_progress = 0
+        
+        # Timing
+        self.sequence_start_time = 0
+        self.input_start_time = 0
+        self.current_note_start = 0
+        self.note_display_duration = 800  # ms por nota
+        self.note_gap_duration = 200     # ms entre notas
         
         # Estadísticas
         self.total_games = 0
         self.best_level = 0
         self.perfect_games = 0
         
-        # Estado del juego
-        self.game_message = "Presiona cualquier tecla para empezar"
+        # Callbacks
+        self.on_play_note: Optional[Callable] = None
+        self.on_highlight_note: Optional[Callable] = None
+        self.on_clear_highlight: Optional[Callable] = None
+        self.on_game_over: Optional[Callable] = None
+        self.on_victory: Optional[Callable] = None
         
-        # LOGGING COGNITIVO - Solo si está habilitado
-        self.cognitive_logging = enable_cognitive_logging and COGNITIVE_LOGGING_AVAILABLE
-        self.session_manager: Optional[SessionManager] = None
-        self.current_logger = None
-        self.sequence_start_time = 0
-        self.patient_id = patient_id
+        # Logging cognitivo
+        self.cognitive_logger = None
+        if enable_cognitive_logging:
+            self.cognitive_logger = CognitiveLogger("piano_simon", patient_id)
         
-        if self.cognitive_logging:
-            try:
-                self.session_manager = SessionManager()
-                print("🧠 Logging cognitivo habilitado para Piano-Simon")
-            except Exception as e:
-                print(f"❌ Error iniciando logging cognitivo: {e}")
-                self.cognitive_logging = False
+        # Mensaje del juego
+        self.game_message = "🎹 Presiona cualquier tecla para empezar"
         
-        # Callbacks para efectos externos
-        self.on_play_note = None
-        self.on_highlight_note = None
-        self.on_clear_highlight = None
-        self.on_game_over = None
-        self.on_victory = None
+        print(f"🎵 Piano Simon inicializado: max {self.max_level} niveles con melodías famosas")
     
     def set_callbacks(self, on_play_note=None, on_highlight_note=None, 
                      on_clear_highlight=None, on_game_over=None, on_victory=None):
-        """Configurar callbacks para efectos externos"""
+        """Configurar callbacks de audio y visuales"""
         self.on_play_note = on_play_note
         self.on_highlight_note = on_highlight_note
         self.on_clear_highlight = on_clear_highlight
         self.on_game_over = on_game_over
         self.on_victory = on_victory
     
-    def reset_game(self):
-        """Resetear estado del juego"""
-        self.player_level = 1
-        self.input_count = 0
-        self.sequence_index = 0
-        self.game_state = GameState.WAITING_TO_START
-        
-        # Generar nueva secuencia aleatoria
-        self.game_sequence = [random.randint(0, 7) for _ in range(self.MAX_LEVEL)]
-        self.game_message = "Presiona cualquier tecla para empezar"
-        
-        # COGNITIVE LOGGING: Iniciar nueva sesión si está habilitado
-        if self.cognitive_logging and self.session_manager:
-            try:
-                self.current_logger = self.session_manager.start_session("piano_simon", self.patient_id)
-                print("🧠 Sesión cognitiva iniciada correctamente")
-            except Exception as e:
-                print(f"❌ Error iniciando sesión cognitiva: {e}")
-                self.cognitive_logging = False
-        
-        print(f"🔄 Juego reiniciado - Secuencia generada para {self.MAX_LEVEL} niveles")
-    
     def start_game_with_button(self, button_index: int):
-        """Iniciar juego cuando se presiona un botón"""
+        """Iniciar juego con botón presionado"""
         if self.game_state == GameState.WAITING_TO_START:
-            print(f"🎮 Juego iniciado con botón {button_index + 1}")
-            self.game_message = f"Nivel {self.player_level} - Observa la secuencia"
-            self.game_state = GameState.SHOWING_SEQUENCE
-            self.sequence_index = 0
-            self.last_sequence_time = time.time() * 1000
-            
-            # COGNITIVE LOGGING: Marcar inicio de secuencia
-            self.sequence_start_time = time.time() * 1000
-            
-            return True
-        return False
+            print(f"🎮 Iniciando juego con tecla {button_index}")
+            self.reset_game()
+            self.start_level()
     
-    def update_sequence_display(self, current_time: float) -> bool:
-        """Actualizar mostrar secuencia - devuelve True si hay cambios"""
+    def start_level(self):
+        """Iniciar nuevo nivel con melodía específica"""
+        # Obtener melodía para este nivel
+        self.current_melody_name, self.game_sequence = self.melody_library.get_melody_for_level(self.player_level)
+        
+        # Resetear progreso del jugador
+        self.player_input = []
+        self.input_progress = 0
+        
+        # Cambiar estado y mostrar secuencia
+        self.game_state = GameState.SHOWING_SEQUENCE
+        self.sequence_start_time = time.time() * 1000
+        self.current_note_start = self.sequence_start_time
+        
+        self.game_message = f"🎵 Nivel {self.player_level}: {self.current_melody_name}"
+        
+        print(f"🎵 Nivel {self.player_level}: {self.current_melody_name} - {self.game_sequence}")
+    
+    def update_sequence_display(self, current_time: float):
+        """Actualizar display de secuencia durante SHOWING_SEQUENCE"""
         if self.game_state != GameState.SHOWING_SEQUENCE:
-            return False
-            
-        delay_time = max(self.MIN_DELAY, self.INITIAL_DELAY - (self.player_level * 20))
+            return
         
-        if current_time - self.last_sequence_time >= delay_time:
-            if self.sequence_index < self.player_level:
-                # Mostrar siguiente nota de la secuencia
-                note_index = self.game_sequence[self.sequence_index]
+        time_since_start = current_time - self.sequence_start_time
+        note_cycle_time = self.note_display_duration + self.note_gap_duration
+        
+        # Calcular qué nota mostrar
+        current_note_index = int(time_since_start // note_cycle_time)
+        time_in_note_cycle = time_since_start % note_cycle_time
+        
+        if current_note_index < len(self.game_sequence):
+            # Mostrar nota actual
+            if time_in_note_cycle < self.note_display_duration:
+                note_to_show = self.game_sequence[current_note_index]
                 
-                # Reproducir nota y highlight
-                if self.on_play_note:
-                    self.on_play_note(note_index, 0.5)
+                # Activar highlight y sonido
                 if self.on_highlight_note:
-                    self.on_highlight_note(note_index)
+                    self.on_highlight_note(note_to_show)
                 
-                print(f"🎵 Secuencia {self.sequence_index + 1}/{self.player_level}: Nota {note_index + 1}")
-                
-                self.sequence_index += 1
-                self.last_sequence_time = current_time
-                
-                # Programar apagado del highlight
-                if self.on_clear_highlight:
-                    threading.Timer(
-                        delay_time / 2000.0, 
-                        self.on_clear_highlight, 
-                        [note_index]
-                    ).start()
-                
-                return True
-                
+                if self.on_play_note and time_in_note_cycle < 50:  # Solo tocar al inicio
+                    self.on_play_note(note_to_show, 0.6)
             else:
-                # Secuencia completada, turno del jugador
-                print("👤 Tu turno - Repite la secuencia")
-                self.game_message = f"Tu turno - Repite la secuencia ({self.player_level} notas)"
-                self.game_state = GameState.PLAYER_INPUT
-                self.input_count = 0
-                self.last_input_time = current_time
-                return True
-        
-        return False
-    
-    def check_player_timeout(self, current_time: float) -> bool:
-        """Verificar timeout del jugador"""
-        if self.game_state == GameState.PLAYER_INPUT:
-            if current_time - self.last_input_time > self.PLAYER_TIMEOUT:
-                print("⏰ Timeout - Game Over")
-                self.game_message = "Timeout - ¡Demasiado lento!"
-                self.game_state = GameState.GAME_OVER
-                return True
-        return False
-    
-    def process_player_input(self, note_index: int) -> bool:
-        """Procesar entrada del jugador - devuelve True si es correcta"""
-        if self.game_state != GameState.PLAYER_INPUT:
-            return False
+                # Gap entre notas
+                if self.on_clear_highlight:
+                    for i in range(8):
+                        self.on_clear_highlight(i)
+        else:
+            # Secuencia completa - permitir input del jugador
+            self.game_state = GameState.PLAYER_INPUT
+            self.input_start_time = current_time
+            self.game_message = f"🎯 Tu turno: repite '{self.current_melody_name}'"
             
+            # Limpiar highlights
+            if self.on_clear_highlight:
+                for i in range(8):
+                    self.on_clear_highlight(i)
+    
+    def process_player_input(self, button_index: int):
+        """Procesar input del jugador"""
+        if self.game_state != GameState.PLAYER_INPUT:
+            return
+        
         current_time = time.time() * 1000
-        expected_note = self.game_sequence[self.input_count]
+        response_time = current_time - self.input_start_time
         
-        # Reproducir nota presionada
-        if self.on_play_note:
-            self.on_play_note(note_index, 0.4)
+        # Añadir a secuencia del jugador
+        self.player_input.append(button_index)
+        expected_note = self.game_sequence[self.input_progress]
+        is_correct = (button_index == expected_note)
         
-        # COGNITIVE LOGGING: Calcular tiempos para logging
-        response_time = current_time - self.sequence_start_time if self.sequence_start_time > 0 else 0
-        presentation_time = self.last_input_time - self.sequence_start_time if self.last_input_time > 0 else 0
+        print(f"🎹 Input: {button_index}, Esperado: {expected_note}, Correcto: {is_correct}")
         
-        is_correct = note_index == expected_note
-        
-        # COGNITIVE LOGGING: Log del evento si está habilitado
-        if self.cognitive_logging and self.current_logger:
-            try:
-                # Preparar secuencias para logging
-                sequence_shown = self.game_sequence[:self.player_level]
-                sequence_input = self.game_sequence[:self.input_count] + [note_index]
-                
-                self.current_logger.log_piano_event(
-                    level=self.player_level,
-                    sequence_shown=sequence_shown,
-                    sequence_input=sequence_input,
-                    presentation_time=presentation_time,
-                    response_time=response_time,
-                    reaction_latency=current_time - self.last_input_time
-                )
-            except Exception as e:
-                print(f"❌ Error logging evento cognitivo: {e}")
+        # Log cognitivo del evento
+        if self.cognitive_logger:
+            self.cognitive_logger.log_event({
+                'level': self.player_level,
+                'sequence_length': len(self.game_sequence),
+                'presentation_time_ms': self.note_display_duration * len(self.game_sequence),
+                'response_time_ms': response_time,
+                'accuracy': 1.0 if is_correct else 0.0,
+                'is_correct': is_correct,
+                'error_type': 'correct' if is_correct else 'wrong_note',
+                'sequence_shown': '|'.join(map(str, self.game_sequence)),
+                'sequence_input': '|'.join(map(str, self.player_input)),
+                'reaction_latency_ms': response_time,
+                'error_position': self.input_progress if not is_correct else -1,
+                'melody_name': self.current_melody_name
+            })
         
         if is_correct:
-            # Respuesta correcta
-            self.input_count += 1
-            print(f"✅ Correcto: Nota {note_index + 1} ({self.input_count}/{self.player_level})")
-            self.game_message = f"¡Correcto! {self.input_count}/{self.player_level}"
+            self.input_progress += 1
             
-            if self.input_count >= self.player_level:
-                # Nivel completado
-                print(f"🎉 Nivel {self.player_level} completado!")
-                self.game_state = GameState.LEVEL_COMPLETE
-            
-            return True
+            # Verificar si completó la secuencia
+            if self.input_progress >= len(self.game_sequence):
+                self.handle_level_complete()
         else:
-            # Respuesta incorrecta
-            print(f"❌ Error: esperaba nota {expected_note + 1}, tocaste nota {note_index + 1}")
-            self.game_message = f"Error: esperaba nota {expected_note + 1}, tocaste nota {note_index + 1}"
+            # Error - game over
             self.game_state = GameState.GAME_OVER
-            return False
+            self.game_message = f"❌ Error en '{self.current_melody_name}'. ¡Intenta de nuevo!"
+            
+            if self.on_game_over:
+                self.on_game_over()
     
     def handle_level_complete(self):
-        """Manejar completar nivel"""
-        if self.game_state != GameState.LEVEL_COMPLETE:
-            return
+        """Manejar nivel completado"""
+        if self.game_state == GameState.PLAYER_INPUT and self.input_progress >= len(self.game_sequence):
+            print(f"✅ Nivel {self.player_level} completado!")
             
-        if self.player_level >= self.MAX_LEVEL:
-            # Juego ganado
-            print("🏆 ¡Juego completado! ¡Felicitaciones!")
-            self.game_message = "¡FELICITACIONES! ¡Completaste todos los niveles!"
-            self.game_state = GameState.GAME_WON
-            self.perfect_games += 1
+            # Actualizar estadísticas
+            if self.player_level > self.best_level:
+                self.best_level = self.player_level
             
-            if self.on_victory:
-                self.on_victory()
-        else:
-            # Avanzar al siguiente nivel
-            self.player_level += 1
-            print(f"⬆️ Avanzando al nivel {self.player_level}")
-            self.game_message = f"¡Avanzando al nivel {self.player_level}!"
-            self.game_state = GameState.SHOWING_SEQUENCE
-            self.sequence_index = 0
-            self.last_sequence_time = time.time() * 1000 + self.START_DELAY
+            # Verificar si ganó el juego completo
+            if self.player_level >= self.max_level:
+                self.game_state = GameState.GAME_WON
+                self.game_message = f"🎉 ¡FELICIDADES! Completaste todas las melodías"
+                self.perfect_games += 1
+                
+                if self.on_victory:
+                    self.on_victory()
+            else:
+                # Avanzar al siguiente nivel
+                self.game_state = GameState.LEVEL_COMPLETE
+                self.player_level += 1
+                self.game_message = f"🎵 ¡Excelente! Siguiente: Nivel {self.player_level}"
+                
+                # Después de 2 segundos, iniciar siguiente nivel
+                time.sleep(0.1)  # Pequeña pausa para feedback visual
     
     def handle_game_over(self):
-        """Manejar game over"""
-        if self.game_state != GameState.GAME_OVER:
-            return
-            
-        if self.on_game_over:
-            self.on_game_over()
-        
-        # Actualizar estadísticas
-        self.total_games += 1
-        if self.player_level > self.best_level:
-            self.best_level = self.player_level
-        
-        # COGNITIVE LOGGING: Cerrar sesión si está habilitado
-        if self.cognitive_logging and self.session_manager:
-            try:
-                csv_file = self.session_manager.end_session()
-                if csv_file:
-                    print(f"🧠 Datos cognitivos guardados: {csv_file}")
-            except Exception as e:
-                print(f"❌ Error cerrando sesión cognitiva: {e}")
-        
-        print(f"💀 Game Over - Nivel alcanzado: {self.player_level}")
-        print(f"📊 Mejor nivel: {self.best_level}")
-        
-        # Resetear después de un delay
-        threading.Timer(2.0, self.reset_game).start()
+        """Manejar game over con opción de reiniciar"""
+        if self.game_state == GameState.GAME_OVER:
+            self.game_message = f"💀 Game Over en Nivel {self.player_level}. Presiona tecla para reiniciar"
     
     def handle_game_won(self):
-        """Manejar victoria"""
-        if self.game_state != GameState.GAME_WON:
-            return
+        """Manejar victoria completa"""
+        if self.game_state == GameState.GAME_WON:
+            self.game_message = f"👑 ¡MAESTRO DE MELODÍAS! Presiona tecla para nuevo juego"
+    
+    def check_player_timeout(self, current_time: float):
+        """Verificar timeout del jugador"""
+        if self.game_state == GameState.PLAYER_INPUT:
+            time_since_input_start = current_time - self.input_start_time
+            timeout_limit = 10000  # 10 segundos
             
-        # Actualizar estadísticas
+            if time_since_input_start > timeout_limit:
+                print("⏰ Timeout del jugador")
+                self.game_state = GameState.GAME_OVER
+                self.game_message = f"⏰ Tiempo agotado en '{self.current_melody_name}'"
+                
+                if self.on_game_over:
+                    self.on_game_over()
+    
+    def reset_game(self):
+        """Resetear juego para nueva partida"""
+        self.game_state = GameState.WAITING_TO_START
+        self.player_level = 1
+        self.game_sequence = []
+        self.current_melody_name = ""
+        self.player_input = []
+        self.input_progress = 0
         self.total_games += 1
-        self.best_level = self.MAX_LEVEL
         
-        # COGNITIVE LOGGING: Cerrar sesión si está habilitado
-        if self.cognitive_logging and self.session_manager:
-            try:
-                csv_file = self.session_manager.end_session()
-                if csv_file:
-                    print(f"🧠 ¡Sesión perfecta guardada!: {csv_file}")
-            except Exception as e:
-                print(f"❌ Error cerrando sesión cognitiva: {e}")
-        
-        print("🏆 ¡VICTORIA TOTAL!")
-        
-        # Resetear después de un delay
-        threading.Timer(3.0, self.reset_game).start()
+        self.game_message = "🎹 Presiona cualquier tecla para empezar"
+        print(f"🔄 Juego reseteado (partida #{self.total_games})")
+    
+    def is_waiting_to_start(self) -> bool:
+        """¿Está esperando a empezar?"""
+        return self.game_state == GameState.WAITING_TO_START
+    
+    def is_waiting_for_input(self) -> bool:
+        """¿Está esperando input del jugador?"""
+        return self.game_state == GameState.PLAYER_INPUT
     
     def get_game_status(self) -> Dict[str, Any]:
-        """Obtener estado actual del juego"""
+        """Obtener estado completo del juego"""
         return {
             "game_state": self.game_state,
             "player_level": self.player_level,
-            "max_level": self.MAX_LEVEL,
+            "max_level": self.max_level,
             "sequence_length": len(self.game_sequence),
-            "input_progress": self.input_count,
+            "input_progress": self.input_progress,
+            "current_sequence": self.game_sequence.copy(),
+            "current_melody": self.current_melody_name,
+            "game_message": self.game_message,
             "total_games": self.total_games,
             "best_level": self.best_level,
-            "perfect_games": self.perfect_games,
-            "current_sequence": self.game_sequence[: self.player_level] if self.game_sequence else [],
-            "game_message": self.game_message
-        }
-    
-    def is_waiting_for_input(self) -> bool:
-        """Verificar si está esperando entrada del jugador"""
-        return self.game_state == GameState.PLAYER_INPUT
-    
-    def is_showing_sequence(self) -> bool:
-        """Verificar si está mostrando secuencia"""
-        return self.game_state == GameState.SHOWING_SEQUENCE
-    
-    def is_waiting_to_start(self) -> bool:
-        """Verificar si está esperando para empezar"""
-        return self.game_state == GameState.WAITING_TO_START 
+            "perfect_games": self.perfect_games
+        } 

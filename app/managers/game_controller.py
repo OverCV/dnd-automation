@@ -13,26 +13,25 @@ from core.arduino_manager import ArduinoManager
 from ui.components.arduino_colors import ArduinoColors
 
 # Importar componentes modularizados
-from .components import (
-    GameRegistry,
-    GameLifecycle, 
-    GameUIManager,
-    GameStatusManager
-)
+from .components import GameRegistry, GameLifecycle, GameUIManager, GameStatusManager
 
 
 class GameController:
     """
     Controlador ligero que coordina entre componentes especializados.
-    
+
     Ya no maneja lógica específica - solo coordina:
     - GameRegistry: Registro de juegos y metadatos
     - GameLifecycle: Ciclo de vida (inicio/parada)
     - GameUIManager: Interfaz de usuario
     - GameStatusManager: Ventanas de estado
     """
-    
-    def __init__(self, arduino_manager: ArduinoManager, main_window):
+
+    def __init__(
+        self,
+        arduino_manager: ArduinoManager,
+        main_window,
+    ):
         from ui.main_window import MainWindow
 
         self.main_window: MainWindow = main_window
@@ -47,39 +46,39 @@ class GameController:
         self.status_manager = GameStatusManager(main_window, self.lifecycle)
 
     # ===== PROPIEDADES DE CONVENIENCIA =====
-    
+
     @property
     def current_game(self) -> Optional[BaseGame]:
         """Acceso directo al juego actual"""
         return self.lifecycle.get_current_game()
-    
+
     @property
     def available_games(self):
         """Acceso directo a juegos disponibles (compatibilidad)"""
         return self.registry.get_available_games()
-    
-    @property 
+
+    @property
     def game_widgets(self):
         """Acceso directo a widgets de juegos (compatibilidad)"""
         return self.ui_manager.get_game_widgets()
 
     # ===== MÉTODOS DE ESTADO =====
-    
+
     def current_game_is_running(self) -> bool:
         """Verificar si hay un juego ejecutándose"""
         return self.lifecycle.is_game_running()
 
     # ===== MÉTODOS DE CONTROL DE JUEGOS =====
-    
+
     def start_game(self, game_id: str):
         """Iniciar un juego"""
         success, message = self.lifecycle.start_game(game_id)
-        
+
         if success:
             # Actualizar UI para mostrar juego activo
             self.ui_manager.highlight_active_game(game_id)
             self.update_session_stats()
-            
+
             # Mostrar mensaje de éxito
             messagebox.showinfo("Juego Iniciado", message)
         else:
@@ -92,12 +91,12 @@ class GameController:
     def start_test_mode(self, game_id: str):
         """Iniciar modo de prueba para un juego específico"""
         success, message = self.lifecycle.start_test_mode(game_id)
-        
+
         if success:
             # Actualizar UI para modo prueba
             self.ui_manager.highlight_test_mode(game_id)
             self.update_session_stats()
-            
+
             # Mostrar información del modo prueba
             messagebox.showinfo("Modo Prueba Iniciado", message)
         else:
@@ -124,12 +123,13 @@ class GameController:
                 # Detención exitosa
                 self.restore_game_ui()
                 messagebox.showinfo(
-                    "Juego Detenido", 
-                    f"✅ {game_name} detenido correctamente"
+                    "Juego Detenido", f"✅ {game_name} detenido correctamente"
                 )
             else:
                 # Si falla, usar parada de emergencia automáticamente
-                print(f"⚠️ Detención normal falló para {game_name}, usando parada forzada...")
+                print(
+                    f"⚠️ Detención normal falló para {game_name}, usando parada forzada..."
+                )
                 self.force_stop_all()
                 self.restore_game_ui()
                 messagebox.showwarning(
@@ -166,7 +166,7 @@ class GameController:
         return self.lifecycle.stop_current_game()
 
     # ===== MÉTODOS DE UI =====
-    
+
     def create_game_entries(self, parent_frame):
         """Crear entradas de juegos usando el UI manager"""
         self.ui_manager.create_game_entries(
@@ -174,7 +174,7 @@ class GameController:
             start_game_callback=self.start_game,
             start_test_callback=self.start_test_mode,
             stop_game_callback=self.stop_game,
-            show_status_callback=self.show_game_status
+            show_status_callback=self.show_game_status,
         )
 
     def restore_game_ui(self):
@@ -190,7 +190,7 @@ class GameController:
         self.ui_manager.highlight_test_mode(active_game_id)
 
     # ===== MÉTODOS DE ESTADO Y ESTADÍSTICAS =====
-    
+
     def show_game_status(self, game_id: str):
         """Mostrar estado detallado del juego"""
         self.status_manager.show_game_status(game_id)
@@ -227,7 +227,7 @@ class GameController:
         self.root.after(2000, self.update_status)
 
     # ===== MÉTODOS DE COMPATIBILIDAD =====
-    
+
     def get_game_tech_info(self, game_id: str) -> str:
         """Obtener información técnica del juego (compatibilidad)"""
         return self.registry.get_tech_info(game_id)
@@ -238,4 +238,4 @@ class GameController:
             state = "normal" if enabled else "disabled"
             widgets["start_btn"].config(state=state)
             if "test_btn" in widgets:
-                widgets["test_btn"].config(state=state) 
+                widgets["test_btn"].config(state=state)

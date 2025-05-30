@@ -8,25 +8,28 @@ from .audio_manager import PianoAudioManager
 from .visual_manager import PianoVisualManager, GameState
 from .hardware_manager import PianoHardwareManager
 from .game_logic import PianoGameLogic
+from .game_state_manager import GameStateManager
 
 
 class PianoSimonGame(BaseGame):
-    """Coordinador principal - VERSIÓN MODULAR usando 3 managers especializados"""
+    """
+    Coordinador principal del Piano Simon - VERSIÓN REFACTORIZADA
+    Usa GameStateManager robusto para evitar bugs de threading
+    """
 
     def __init__(self, arduino_manager: ArduinoManager, enable_cognitive_logging: bool = True, patient_id: str = None):
         super().__init__(arduino_manager)
 
         self.arduino = arduino_manager
-        self.running = False
-        self.game_thread = None
         self.name = "Piano Simon Says"
         self.description = "Juego Simon Says usando piano digital de 8 notas"
 
-        # Auto-generar patient_id si no se proporciona
+        # NUEVO: Gestor de estado robusto
+        self.state_manager = GameStateManager()
+        
+        # Mejorar sistema de patient_id
         if patient_id is None:
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            patient_id = f"JUGADOR_{timestamp}"
+            patient_id = self._get_or_create_patient_id()
 
         # Inicializar los 3 managers especializados
         self.audio_manager = PianoAudioManager()
@@ -37,11 +40,11 @@ class PianoSimonGame(BaseGame):
             patient_id=patient_id
         )
 
-        # Control de modo
-        self.test_mode = False
-
         # Configurar callbacks del game logic
         self._setup_callbacks()
+        
+        # Registrar funciones de limpieza
+        self._register_cleanup_callbacks()
 
     def _setup_callbacks(self):
         """Configurar callbacks entre componentes"""
@@ -52,86 +55,83 @@ class PianoSimonGame(BaseGame):
             on_game_over=self.audio_manager.reproducir_secuencia_game_over,
             on_victory=self.audio_manager.reproducir_secuencia_victoria,
         )
+    
+    def _register_cleanup_callbacks(self):
+        """Registrar funciones de limpieza en el state manager"""
+        self.state_manager.add_cleanup_callback(self.audio_manager.detener_todos_sonidos)
+        self.state_manager.add_cleanup_callback(self.visual_manager.cerrar)
+        self.state_manager.add_cleanup_callback(self.hardware_manager.cleanup)
 
     def initialize_hardware(self) -> bool:
         """Inicializar hardware específico del juego (método abstracto)"""
         return self.hardware_manager.initialize_hardware()
 
     def start_game(self) -> bool:
-        """Iniciar juego Simon"""
+        """Iniciar juego Simon de forma ROBUSTA"""
         try:
             if not self.initialize_hardware():
+                print("❌ Error inicializando hardware")
                 return False
 
-            self.running = True
-            self.test_mode = False
+            if not self.state_manager.can_start():
+                print("❌ El juego no puede iniciarse en este momento")
+                return False
+
+            # Resetear lógica del juego
             self.game_logic.reset_game()
 
             # Mostrar animación de inicio
             self.visual_manager.mostrar_animacion_inicio(self.audio_manager)
 
-            # Iniciar hilo del juego
-            self.game_thread = threading.Thread(target=self._game_loop, daemon=True)
-            self.game_thread.start()
-
-            print("🎹 Piano Simon Says iniciado correctamente")
-            return True
+            # Iniciar usando el state manager robusto
+            success = self.state_manager.start_game(self._game_loop_wrapper)
+            
+            if success:
+                print("🎹 Piano Simon Says iniciado correctamente")
+            
+            return success
 
         except Exception as e:
             print(f"❌ Error iniciando juego: {e}")
             return False
 
     def start_test_mode(self) -> bool:
-        """Iniciar modo de prueba libre (ARREGLADO)"""
+        """Iniciar modo de prueba de forma ROBUSTA"""
         try:
             if not self.initialize_hardware():
+                print("❌ Error inicializando hardware")
                 return False
 
-            self.running = True
-            self.test_mode = True
-            print("🧪 Modo de prueba iniciado")
+            if not self.state_manager.can_start():
+                print("❌ El modo prueba no puede iniciarse en este momento")
+                return False
 
-            # Iniciar hilo del modo prueba
-            self.game_thread = threading.Thread(target=self._test_loop, daemon=True)
-            self.game_thread.start()
-
-            return True
+            print("🧪 Iniciando modo de prueba...")
+            
+            # Iniciar usando el state manager robusto
+            success = self.state_manager.start_game(self._test_loop_wrapper)
+            
+            return success
 
         except Exception as e:
             print(f"❌ Error iniciando modo prueba: {e}")
             return False
 
     def stop_game(self):
-        """Detener juego"""
-        try:
-            print("🛑 Deteniendo Piano Simon Says...")
-            self.running = False
-            self.test_mode = False
-
-            if self.game_thread and self.game_thread.is_alive():
-                self.game_thread.join(timeout=2)
-
-            # Limpiar recursos
-            self.audio_manager.detener_todos_sonidos()
-            self.visual_manager.cerrar()
-            self.hardware_manager.cleanup()
-
-            print("✅ Piano Simon Says detenido")
-
-        except Exception as e:
-            print(f"❌ Error deteniendo juego: {e}")
+        """Detener juego de forma ROBUSTA"""
+        print("🛑 Solicitando parada del juego...")
+        self.state_manager.stop_game()
 
     def get_game_status(self) -> Dict[str, Any]:
         """Obtener estado del juego"""
         game_status = self.game_logic.get_game_status()
+        state_manager_status = self.state_manager.get_status()
 
         return {
             "name": self.name,
-            "running": self.running,
-            "test_mode": self.test_mode,
-            "game_state": game_status["game_state"].name
-            if not self.test_mode
-            else "TEST_MODE",
+            "running": self.state_manager.is_running(),
+            "lifecycle_state": state_manager_status['lifecycle_state'],
+            "game_state": game_status["game_state"].name,
             "level": game_status["player_level"],
             "max_level": game_status["max_level"],
             "sequence_length": game_status["sequence_length"],
@@ -144,67 +144,15 @@ class PianoSimonGame(BaseGame):
                 nota[0] for nota in self.audio_manager.obtener_todas_notas()
             ],
             "hardware_initialized": self.hardware_manager.is_hardware_ready(),
+            "uptime": state_manager_status['uptime'],
+            "total_runs": state_manager_status['total_runs']
         }
 
-    def _test_loop(self):
-        """Loop para modo de prueba - ARREGLADO para solo reproducir cuando presiones"""
-        print("🧪 Iniciando modo de prueba libre...")
-        test_message = "🧪 MODO PRUEBA - Presiona un botón para probar"
-
-        while self.running and self.test_mode:
-            try:
-                # Leer botones del hardware
-                self.hardware_manager.read_buttons()
-                pressed_buttons = self.hardware_manager.get_pressed_buttons()
-
-                # Solo reproducir si hay botones presionados (ARREGLO AQUÍ)
-                for button_index in pressed_buttons:
-                    # Reproducir nota del botón presionado
-                    self.audio_manager.reproducir_nota(button_index, 0.5)
-
-                    # Activar animación visual
-                    self.visual_manager.activar_animacion_tecla(button_index)
-
-                    # Actualizar mensaje
-                    nota_info = self.audio_manager.obtener_info_nota(button_index)
-                    pin_info = self.hardware_manager.get_pin_info()[button_index]
-                    test_message = f"🎵 Probando: {nota_info[0]} ({nota_info[1]} Hz) - Pin {pin_info}"
-
-                # Actualizar animaciones
-                self.visual_manager.actualizar_animaciones()
-
-                # Procesar eventos de Pygame
-                self.visual_manager.procesar_eventos_pygame(
-                    callback_salir=self._handle_quit,
-                    callback_reiniciar=self._handle_restart_test,
-                    callback_test_nota=self._handle_keyboard_test,
-                )
-
-                # Dibujar visualización
-                self.visual_manager.dibujar_todo(
-                    game_state=GameState.WAITING_TO_START,
-                    game_message=test_message,
-                    player_level=0,
-                    max_level=8,
-                    game_sequence=[],
-                    input_count=0,
-                    button_pressed=self.hardware_manager.get_button_states(),
-                    arduino_connected=self.arduino.connected,
-                    total_games=0,
-                    best_level=0,
-                    perfect_games=0,
-                )
-
-                self.visual_manager.actualizar_display()
-                time.sleep(0.01)
-
-            except Exception as e:
-                print(f"❌ Error en loop de prueba: {e}")
-                break
-
-    def _game_loop(self):
-        """Loop principal del juego Simon"""
-        while self.running and not self.test_mode:
+    def _game_loop_wrapper(self):
+        """Wrapper del loop principal con manejo robusto"""
+        print("🎮 Iniciando loop principal del Simon...")
+        
+        while self.state_manager.should_continue():
             try:
                 current_time = time.time() * 1000
 
@@ -230,9 +178,9 @@ class PianoSimonGame(BaseGame):
                 # Actualizar animaciones
                 self.visual_manager.actualizar_animaciones()
 
-                # Procesar eventos de Pygame
+                # Procesar eventos de Pygame - AQUÍ ESTÁ LA CLAVE
                 self.visual_manager.procesar_eventos_pygame(
-                    callback_salir=self._handle_quit,
+                    callback_salir=self._handle_quit_robustly,
                     callback_reiniciar=self._handle_restart,
                     callback_test_nota=self._handle_keyboard_test,
                 )
@@ -260,9 +208,66 @@ class PianoSimonGame(BaseGame):
                 print(f"❌ Error en loop del juego: {e}")
                 break
 
-    def _handle_quit(self):
-        """Manejar salida del juego"""
-        self.running = False
+        print("🔄 Loop principal terminado")
+
+    def _test_loop_wrapper(self):
+        """Wrapper del loop de prueba con manejo robusto"""
+        print("🧪 Iniciando loop de prueba...")
+        test_message = "🧪 MODO PRUEBA - Presiona un botón para probar"
+
+        while self.state_manager.should_continue():
+            try:
+                # Leer botones del hardware
+                self.hardware_manager.read_buttons()
+                pressed_buttons = self.hardware_manager.get_pressed_buttons()
+
+                # Solo reproducir si hay botones presionados
+                for button_index in pressed_buttons:
+                    self.audio_manager.reproducir_nota(button_index, 0.5)
+                    self.visual_manager.activar_animacion_tecla(button_index)
+                    
+                    nota_info = self.audio_manager.obtener_info_nota(button_index)
+                    pin_info = self.hardware_manager.get_pin_info()[button_index]
+                    test_message = f"🎵 Probando: {nota_info[0]} ({nota_info[1]} Hz) - Pin {pin_info}"
+
+                # Actualizar animaciones
+                self.visual_manager.actualizar_animaciones()
+
+                # Procesar eventos de Pygame
+                self.visual_manager.procesar_eventos_pygame(
+                    callback_salir=self._handle_quit_robustly,
+                    callback_reiniciar=self._handle_restart_test,
+                    callback_test_nota=self._handle_keyboard_test,
+                )
+
+                # Dibujar visualización
+                self.visual_manager.dibujar_todo(
+                    game_state=GameState.WAITING_TO_START,
+                    game_message=test_message,
+                    player_level=0,
+                    max_level=8,
+                    game_sequence=[],
+                    input_count=0,
+                    button_pressed=self.hardware_manager.get_button_states(),
+                    arduino_connected=self.arduino.connected,
+                    total_games=0,
+                    best_level=0,
+                    perfect_games=0,
+                )
+
+                self.visual_manager.actualizar_display()
+                time.sleep(0.01)
+
+            except Exception as e:
+                print(f"❌ Error en loop de prueba: {e}")
+                break
+
+        print("🔄 Loop de prueba terminado")
+
+    def _handle_quit_robustly(self):
+        """Manejar salida del juego de forma ROBUSTA"""
+        print("🚪 Solicitando salida del juego...")
+        self.state_manager.stop_game()
 
     def _handle_restart(self):
         """Manejar reinicio del juego"""
@@ -290,6 +295,31 @@ class PianoSimonGame(BaseGame):
     def probar_todas_notas(self):
         """Probar todas las notas en secuencia"""
         self.audio_manager.probar_todas_notas()
+
+    def _get_or_create_patient_id(self) -> str:
+        """Obtener patient_id del sistema de gestión o crear uno nuevo"""
+        try:
+            # Intentar cargar del sistema de gestión de pacientes específico de piano_simon
+            import json
+            import os
+            
+            patients_file = "data/cognitive/piano_simon/patients.json"
+            if os.path.exists(patients_file):
+                with open(patients_file, 'r', encoding='utf-8') as f:
+                    patients = json.load(f)
+                    
+                # Si hay pacientes, usar el último
+                if patients:
+                    latest_patient = max(patients.keys(), key=lambda k: patients[k].get('created', ''))
+                    return latest_patient
+                    
+        except Exception as e:
+            print(f"⚠️ No se pudo acceder al sistema de pacientes: {e}")
+        
+        # Fallback: crear ID temporal
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        return f"TEMP_PIANO_PLAYER_{timestamp}"
 
 
 # Funciones de utilidad para compatibilidad
