@@ -1,8 +1,16 @@
 import time
 import random
 import threading
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from enum import Enum
+
+# Importar logging cognitivo - SÚPER SIMPLE
+try:
+    from ...core.cognitive import SessionManager
+    COGNITIVE_LOGGING_AVAILABLE = True
+except ImportError:
+    COGNITIVE_LOGGING_AVAILABLE = False
+    print("⚠️ Logging cognitivo no disponible")
 
 
 class GameState(Enum):
@@ -17,7 +25,7 @@ class GameState(Enum):
 class PianoGameLogic:
     """Maneja exclusivamente la lógica del juego Simon Says"""
     
-    def __init__(self):
+    def __init__(self, enable_cognitive_logging: bool = False, patient_id: str = "default"):
         # Constantes del juego Simon
         self.MAX_LEVEL = 20
         self.INITIAL_DELAY = 800  # ms entre notas en secuencia
@@ -41,6 +49,21 @@ class PianoGameLogic:
         
         # Estado del juego
         self.game_message = "Presiona cualquier tecla para empezar"
+        
+        # LOGGING COGNITIVO - Solo si está habilitado
+        self.cognitive_logging = enable_cognitive_logging and COGNITIVE_LOGGING_AVAILABLE
+        self.session_manager: Optional[SessionManager] = None
+        self.current_logger = None
+        self.sequence_start_time = 0
+        self.patient_id = patient_id
+        
+        if self.cognitive_logging:
+            try:
+                self.session_manager = SessionManager()
+                print("🧠 Logging cognitivo habilitado para Piano-Simon")
+            except Exception as e:
+                print(f"❌ Error iniciando logging cognitivo: {e}")
+                self.cognitive_logging = False
         
         # Callbacks para efectos externos
         self.on_play_note = None
@@ -69,6 +92,13 @@ class PianoGameLogic:
         self.game_sequence = [random.randint(0, 7) for _ in range(self.MAX_LEVEL)]
         self.game_message = "Presiona cualquier tecla para empezar"
         
+        # COGNITIVE LOGGING: Iniciar nueva sesión si está habilitado
+        if self.cognitive_logging and self.session_manager:
+            try:
+                self.current_logger = self.session_manager.start_session("piano_simon", self.patient_id)
+            except Exception as e:
+                print(f"❌ Error iniciando sesión cognitiva: {e}")
+        
         print(f"🔄 Juego reiniciado - Secuencia generada para {self.MAX_LEVEL} niveles")
     
     def start_game_with_button(self, button_index: int):
@@ -79,6 +109,10 @@ class PianoGameLogic:
             self.game_state = GameState.SHOWING_SEQUENCE
             self.sequence_index = 0
             self.last_sequence_time = time.time() * 1000
+            
+            # COGNITIVE LOGGING: Marcar inicio de secuencia
+            self.sequence_start_time = time.time() * 1000
+            
             return True
         return False
     
@@ -141,13 +175,38 @@ class PianoGameLogic:
         if self.game_state != GameState.PLAYER_INPUT:
             return False
             
+        current_time = time.time() * 1000
         expected_note = self.game_sequence[self.input_count]
         
         # Reproducir nota presionada
         if self.on_play_note:
             self.on_play_note(note_index, 0.4)
         
-        if note_index == expected_note:
+        # COGNITIVE LOGGING: Calcular tiempos para logging
+        response_time = current_time - self.sequence_start_time if self.sequence_start_time > 0 else 0
+        presentation_time = self.last_input_time - self.sequence_start_time if self.last_input_time > 0 else 0
+        
+        is_correct = note_index == expected_note
+        
+        # COGNITIVE LOGGING: Log del evento si está habilitado
+        if self.cognitive_logging and self.current_logger:
+            try:
+                # Preparar secuencias para logging
+                sequence_shown = self.game_sequence[:self.player_level]
+                sequence_input = self.game_sequence[:self.input_count] + [note_index]
+                
+                self.current_logger.log_piano_event(
+                    level=self.player_level,
+                    sequence_shown=sequence_shown,
+                    sequence_input=sequence_input,
+                    presentation_time=presentation_time,
+                    response_time=response_time,
+                    reaction_latency=current_time - self.last_input_time
+                )
+            except Exception as e:
+                print(f"❌ Error logging evento cognitivo: {e}")
+        
+        if is_correct:
             # Respuesta correcta
             self.input_count += 1
             print(f"✅ Correcto: Nota {note_index + 1} ({self.input_count}/{self.player_level})")
@@ -202,6 +261,15 @@ class PianoGameLogic:
         if self.player_level > self.best_level:
             self.best_level = self.player_level
         
+        # COGNITIVE LOGGING: Cerrar sesión si está habilitado
+        if self.cognitive_logging and self.session_manager:
+            try:
+                csv_file = self.session_manager.end_session()
+                if csv_file:
+                    print(f"🧠 Datos cognitivos guardados: {csv_file}")
+            except Exception as e:
+                print(f"❌ Error cerrando sesión cognitiva: {e}")
+        
         print(f"💀 Game Over - Nivel alcanzado: {self.player_level}")
         print(f"📊 Mejor nivel: {self.best_level}")
         
@@ -216,6 +284,15 @@ class PianoGameLogic:
         # Actualizar estadísticas
         self.total_games += 1
         self.best_level = self.MAX_LEVEL
+        
+        # COGNITIVE LOGGING: Cerrar sesión si está habilitado
+        if self.cognitive_logging and self.session_manager:
+            try:
+                csv_file = self.session_manager.end_session()
+                if csv_file:
+                    print(f"🧠 ¡Sesión perfecta guardada!: {csv_file}")
+            except Exception as e:
+                print(f"❌ Error cerrando sesión cognitiva: {e}")
         
         print("🏆 ¡VICTORIA TOTAL!")
         

@@ -33,6 +33,13 @@ class GameRegistry:
             "simon_says": "Juego de memoria Simon Says con 6 LEDs y keypad 4x4. Comunicación serial directa.",
         }
         
+        # NUEVO: Juegos que soportan logging cognitivo - SÚPER SIMPLE
+        self.cognitive_games: Dict[str, str] = {
+            "piano_digital": "🧠 Evalúa memoria, secuencias, tiempo de reacción, fatiga cognitiva",
+            # Futuros:
+            # "two_lane_runner": "🧠 Evalúa atención dividida, coordinación, tiempo de reacción",
+        }
+        
         # Iconos para cada juego
         self.game_icons: Dict[str, str] = {
             "ping_pong": "🏓",
@@ -72,10 +79,31 @@ class GameRegistry:
         # Por ahora solo piano digital
         return ["piano_digital"]
     
-    def create_temp_game_instance(self, game_id: str, arduino_manager):
+    def supports_cognitive_logging(self, game_id: str) -> bool:
+        """Verificar si un juego soporta logging cognitivo"""
+        return game_id in self.cognitive_games
+    
+    def get_cognitive_info(self, game_id: str) -> str:
+        """Obtener información sobre capacidades cognitivas de un juego"""
+        return self.cognitive_games.get(game_id, "")
+    
+    def get_cognitive_enabled_games(self) -> Dict[str, str]:
+        """Obtener todos los juegos con capacidades cognitivas"""
+        return self.cognitive_games
+    
+    def create_temp_game_instance(self, game_id: str, arduino_manager, enable_cognitive_logging: bool = False, patient_id: str = "default"):
         """Crear instancia temporal de un juego para obtener información"""
         if not self.is_valid_game(game_id):
             return None
         
         game_class = self.get_game_class(game_id)
-        return game_class(arduino_manager=arduino_manager) 
+        
+        try:
+            # Verificar si el juego soporta logging cognitivo
+            if self.supports_cognitive_logging(game_id) and enable_cognitive_logging:
+                return game_class(arduino_manager, enable_cognitive_logging=True, patient_id=patient_id)
+            else:
+                return game_class(arduino_manager)
+        except TypeError:
+            # Si el constructor no acepta parámetros cognitivos, usar constructor normal
+            return game_class(arduino_manager) 

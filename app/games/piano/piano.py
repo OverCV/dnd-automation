@@ -13,7 +13,7 @@ from .game_logic import PianoGameLogic
 class PianoSimonGame(BaseGame):
     """Coordinador principal - VERSIÓN MODULAR usando 3 managers especializados"""
 
-    def __init__(self, arduino_manager: ArduinoManager):
+    def __init__(self, arduino_manager: ArduinoManager, enable_cognitive_logging: bool = False, patient_id: str = "default"):
         super().__init__(arduino_manager)
 
         self.arduino = arduino_manager
@@ -26,7 +26,10 @@ class PianoSimonGame(BaseGame):
         self.audio_manager = PianoAudioManager()
         self.visual_manager = PianoVisualManager()
         self.hardware_manager = PianoHardwareManager(arduino_manager)
-        self.game_logic = PianoGameLogic()
+        self.game_logic = PianoGameLogic(
+            enable_cognitive_logging=enable_cognitive_logging,
+            patient_id=patient_id
+        )
 
         # Control de modo
         self.test_mode = False
