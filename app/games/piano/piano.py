@@ -13,7 +13,7 @@ from .game_logic import PianoGameLogic
 class PianoSimonGame(BaseGame):
     """Coordinador principal - VERSIÓN MODULAR usando 3 managers especializados"""
 
-    def __init__(self, arduino_manager: ArduinoManager, enable_cognitive_logging: bool = False, patient_id: str = "default"):
+    def __init__(self, arduino_manager: ArduinoManager, enable_cognitive_logging: bool = True, patient_id: str = None):
         super().__init__(arduino_manager)
 
         self.arduino = arduino_manager
@@ -21,6 +21,12 @@ class PianoSimonGame(BaseGame):
         self.game_thread = None
         self.name = "Piano Simon Says"
         self.description = "Juego Simon Says usando piano digital de 8 notas"
+
+        # Auto-generar patient_id si no se proporciona
+        if patient_id is None:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            patient_id = f"JUGADOR_{timestamp}"
 
         # Inicializar los 3 managers especializados
         self.audio_manager = PianoAudioManager()

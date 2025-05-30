@@ -1,0 +1,11 @@
+timestamp,session_id,level,sequence_length,presentation_time_ms,response_time_ms,accuracy,error_type,sequence_shown,sequence_input,reaction_latency_ms,is_correct,error_position
+2025-05-29T20:34:06.802724,TEST_P001_piano_simon_20250529_203406,1,3,2250,2863,1.0,correct,4|0|1,4|0|1,0,True,-1
+2025-05-29T20:34:06.803724,TEST_P001_piano_simon_20250529_203406,1,3,2250,1700,1.0,correct,4|3|3,4|3|3,0,True,-1
+2025-05-29T20:34:06.805725,TEST_P001_piano_simon_20250529_203406,2,4,3000,2354,1.0,correct,2|1|2|5,2|1|2|5,0,True,-1
+2025-05-29T20:34:06.806728,TEST_P001_piano_simon_20250529_203406,2,4,3000,3634,0.75,sequence_error,2|0|5|6,4|0|5|6,0,False,0
+2025-05-29T20:34:06.810728,TEST_P001_piano_simon_20250529_203406,3,5,3750,1320,1.0,correct,2|3|1|1|7,2|3|1|1|7,0,True,-1
+2025-05-29T20:34:06.812732,TEST_P001_piano_simon_20250529_203406,3,5,3750,2464,1.0,correct,2|6|3|2|3,2|6|3|2|3,0,True,-1
+2025-05-29T20:34:06.813732,TEST_P001_piano_simon_20250529_203406,4,6,4500,4307,1.0,correct,5|1|4|2|4|7,5|1|4|2|4|7,0,True,-1
+2025-05-29T20:34:06.815751,TEST_P001_piano_simon_20250529_203406,4,6,4500,1636,1.0,correct,4|3|0|6|5|7,4|3|0|6|5|7,0,True,-1
+2025-05-29T20:34:06.817764,TEST_P001_piano_simon_20250529_203406,5,7,5250,2230,1.0,correct,2|0|4|2|3|2|5,2|0|4|2|3|2|5,0,True,-1
+2025-05-29T20:34:06.819301,TEST_P001_piano_simon_20250529_203406,5,7,5250,2317,1.0,correct,7|5|4|1|5|4|0,7|5|4|1|5|4|0,0,True,-1

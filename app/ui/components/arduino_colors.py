@@ -12,6 +12,14 @@ class ArduinoColors:
     PURPLE = "#4a2370"  # Púrpura
     BLUE_DARK = "#1d2087"  # Azul oscuro
 
+    # Colores verde para análisis cognitivo
+    GREEN_LIGHT = "#d4edda"  # Verde claro
+    GREEN_MID = "#28a745"    # Verde medio
+    GREEN_DARK = "#1e7e34"   # Verde oscuro
+
+    # Colores básicos
+    WHITE = "#ffffff"        # Blanco puro
+
     # Colores de fondo elegantes (NO MÁS NEGRO HORRIBLE!)
     BACKGROUND_PRIMARY = "#f8f9fa"  # Gris muy claro elegante
     BACKGROUND_SECONDARY = "#e9ecef"  # Gris claro suave

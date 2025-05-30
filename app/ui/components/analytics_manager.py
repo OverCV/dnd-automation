@@ -148,7 +148,7 @@ class AnalyticsManager:
         tk.Label(
             stats_window,
             text="📊 Estadísticas de la Plataforma",
-            bg=self.colors.BLUE_LIGHT,
+            bg=self.colors.BACKGROUND_PRIMARY,
             fg=self.colors.BLUE_DARK,
             font=("Arial", 16, "bold"),
         ).pack(pady=20)

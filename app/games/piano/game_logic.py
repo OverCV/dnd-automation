@@ -96,8 +96,10 @@ class PianoGameLogic:
         if self.cognitive_logging and self.session_manager:
             try:
                 self.current_logger = self.session_manager.start_session("piano_simon", self.patient_id)
+                print("🧠 Sesión cognitiva iniciada correctamente")
             except Exception as e:
                 print(f"❌ Error iniciando sesión cognitiva: {e}")
+                self.cognitive_logging = False
         
         print(f"🔄 Juego reiniciado - Secuencia generada para {self.MAX_LEVEL} niveles")
     
