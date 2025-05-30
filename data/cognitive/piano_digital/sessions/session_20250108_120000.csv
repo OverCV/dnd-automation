@@ -1,0 +1,11 @@
+timestamp,level,event_type,message,score,player_level,game_duration,session_notes
+2025-01-08 12:00:00,INFO,GAME_START,Inicio de sesión Piano Simon,,1,,Sesión de prueba inicial
+2025-01-08 12:00:15,INFO,NOTE_PLAYED,Reproduciendo Do,10,1,15,Primer botón presionado
+2025-01-08 12:00:18,INFO,NOTE_PLAYED,Reproduciendo Re,20,1,18,Segundo botón correcto
+2025-01-08 12:00:25,ERROR,WRONG_NOTE,Error: Se esperaba Mi pero se presionó Fa,20,1,25,Error de memoria
+2025-01-08 12:00:30,INFO,LEVEL_COMPLETE,Nivel 1 completado,50,2,30,Avance de nivel
+2025-01-08 12:00:45,INFO,NOTE_PLAYED,Reproduciendo Sol,60,2,45,Secuencia de nivel 2
+2025-01-08 12:01:00,INFO,NOTE_PLAYED,Reproduciendo La,70,2,60,Continuando nivel 2
+2025-01-08 12:01:15,INFO,LEVEL_COMPLETE,Nivel 2 completado,100,3,75,Buen progreso
+2025-01-08 12:01:30,ERROR,TIMEOUT,Tiempo agotado en nivel 3,100,3,90,Dificultad aumentando
+2025-01-08 12:01:45,INFO,GAME_OVER,Sesión terminada,100,3,105,Fin de sesión 

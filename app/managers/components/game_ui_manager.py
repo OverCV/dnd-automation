@@ -156,9 +156,10 @@ class GameUIManager:
                      padx=2, pady=2, sticky="ew")
 
         # Botón de estado
+        status_btn_text = "📈 Análisis" if game_id == "piano_digital" else "📊 Estado"
         status_btn = tk.Button(
             controls_frame,
-            text="📊 Estado",
+            text=status_btn_text,
             command=lambda: status_callback(game_id),
             bg=self.colors.INFO,
             fg=self.colors.BLUE_DARK,

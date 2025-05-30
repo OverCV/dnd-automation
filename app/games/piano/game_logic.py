@@ -6,7 +6,7 @@ from enum import Enum
 
 # Importar logging cognitivo - SÚPER SIMPLE
 try:
-    from ...core.cognitive import SessionManager
+    from core.cognitive import SessionManager
     COGNITIVE_LOGGING_AVAILABLE = True
 except ImportError:
     COGNITIVE_LOGGING_AVAILABLE = False
@@ -95,7 +95,7 @@ class PianoGameLogic:
         # COGNITIVE LOGGING: Iniciar nueva sesión si está habilitado
         if self.cognitive_logging and self.session_manager:
             try:
-                self.current_logger = self.session_manager.start_session("piano_simon", self.patient_id)
+                self.current_logger = self.session_manager.start_session("piano_digital", self.patient_id)
             except Exception as e:
                 print(f"❌ Error iniciando sesión cognitiva: {e}")
         

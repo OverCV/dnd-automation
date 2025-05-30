@@ -286,6 +286,202 @@ app/
 - **🎵 Audio Avanzado**: Efectos de sonido mejorados
 - **🎯 Achievements**: Sistema de logros y puntuaciones
 
+## 🚀 Características Principales
+
+### 🎯 Juegos Disponibles
+- **🎹 Piano Simon**: Juego de memoria y secuencias musicales con evaluación neurocognitiva
+- **🏃 Two-Lane Runner**: Juego de esquivar obstáculos en dos carriles
+- **🏓 Ping Pong**: Clásico juego de ping pong
+
+### 📊 **NUEVO: Análisis Neurocognitivo**
+- **Gráficas en tiempo real** de rendimiento cognitivo
+- **Análisis de progreso** a lo largo de múltiples sesiones
+- **Métricas de tiempo de reacción** y patrones de error
+- **Reportes detallados** con recomendaciones personalizadas
+- **Exportación de datos** a Excel para análisis adicional
+
+## 🧠 Evaluación Neurocognitiva
+
+### Piano Simon - Análisis Cognitivo
+El Piano Simon no es solo un juego, es una **herramienta de evaluación neurocognitiva** que mide:
+
+- **Memoria de trabajo**: Capacidad de recordar secuencias
+- **Atención sostenida**: Concentración durante la sesión
+- **Tiempo de reacción**: Velocidad de respuesta
+- **Control de errores**: Precisión en la ejecución
+- **Progreso temporal**: Mejora a lo largo del tiempo
+
+### 📈 Gráficas Disponibles
+
+1. **🎯 Rendimiento**:
+   - Progreso de nivel por sesión
+   - Distribución de tipos de eventos
+   - Tendencia de errores
+   - Duración de sesiones
+
+2. **⚡ Tiempos de Reacción**:
+   - Distribución de tiempos de respuesta
+   - Evolución temporal de velocidad
+
+3. **❌ Análisis de Errores**:
+   - Tipos de errores más frecuentes
+   - Patrones temporales de errores
+   - Proporción éxito vs error
+
+4. **📈 Progreso**:
+   - Evolución de métricas por sesión
+   - Análisis de tendencias de mejora
+   - Interpretación automática del progreso
+
+## 🔧 Instalación
+
+```bash
+# Clonar repositorio
+git clone [url-del-repositorio]
+cd main
+
+# Crear entorno virtual
+python -m venv .venv
+source .venv/bin/activate  # En Windows: .venv\Scripts\activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+
+# Ejecutar aplicación
+python app/main.py
+```
+
+## 📋 Dependencias
+
+```
+pyfirmata          # Comunicación con Arduino
+pygame             # Audio y gráficos de juegos
+numpy              # Cálculos numéricos
+pandas             # Análisis de datos
+matplotlib         # Gráficas y visualizaciones
+cvzone             # Visión por computadora (opcional)
+opencv-python      # Procesamiento de imágenes (opcional)
+mediapipe          # Análisis de gestos (opcional)
+```
+
+## 🎮 Uso
+
+### Iniciar Juegos
+1. **▶️ Iniciar**: Ejecuta el juego completo
+2. **🧪 Probar**: Modo de prueba libre (solo Piano Simon)
+3. **⏹️ Detener**: Termina el juego actual
+
+### Análisis Cognitivo (Piano Simon)
+1. **📈 Análisis**: Abre ventana con gráficas de evaluación neurocognitiva
+2. **📊 Exportar Datos**: Guarda datos en Excel
+3. **📋 Generar Reporte**: Crea reporte textual con recomendaciones
+4. **🔄 Actualizar**: Recarga datos más recientes
+
+### Datos de Sesión
+Los datos se guardan automáticamente en:
+```
+data/cognitive/piano_simon/sessions/
+├── session_YYYYMMDD_HHMMSS.csv
+├── session_YYYYMMDD_HHMMSS.csv
+└── ...
+```
+
+## 🔬 Interpretación de Resultados
+
+### Métricas Cognitivas
+- **Eficiencia > 85%**: Rendimiento excelente
+- **Eficiencia 70-85%**: Buen rendimiento con espacio para mejora
+- **Eficiencia < 70%**: Requiere atención y práctica adicional
+
+### Tendencias de Progreso
+- **📈 Mejora Positiva**: Pendiente ascendente en eficiencia
+- **📊 Estable**: Rendimiento consistente
+- **📉 Necesita Atención**: Tendencia descendente
+
+## 🔧 Hardware Soportado
+
+- **Arduino Uno/Nano** con Firmata
+- **LCD Keypad Shield** para interfaz
+- **Botones externos** para Piano Simon (pines 2-9)
+- **Buzzer/Speaker** para audio (opcional)
+
+## 📁 Estructura del Proyecto
+
+```
+main/
+├── app/
+│   ├── core/                    # Clases base y Arduino
+│   ├── games/                   # Implementación de juegos
+│   ├── managers/                # Gestores de componentes
+│   ├── ui/                      # Interfaz de usuario
+│   │   ├── cognitive/           # 🆕 Análisis neurocognitivo
+│   │   └── components/          # Componentes UI
+│   └── main.py                  # Punto de entrada
+├── data/
+│   └── cognitive/               # 🆕 Datos de evaluación
+│       └── piano_simon/
+│           └── sessions/        # Archivos CSV de sesiones
+├── requirements.txt
+└── README.md
+```
+
+## 🧪 Pruebas
+
+```bash
+# Probar análisis cognitivo
+python test_cognitive_analytics.py
+
+# Probar funcionalidad específica
+python test_piano_test_mode.py
+```
+
+## 🎯 Casos de Uso
+
+### 🏥 Evaluación Clínica
+- Evaluación de memoria de trabajo
+- Seguimiento de rehabilitación cognitiva
+- Detección temprana de deterioro
+
+### 🎓 Investigación Educativa
+- Análisis de capacidades de aprendizaje
+- Seguimiento de progreso académico
+- Personalización de métodos de enseñanza
+
+### 🏋️ Entrenamiento Cognitivo
+- Mejora de tiempo de reacción
+- Fortalecimiento de memoria
+- Desarrollo de concentración
+
+## 📊 Ejemplo de Datos
+
+```csv
+timestamp,level,event_type,message,score,player_level,game_duration,session_notes
+2025-01-08 12:00:00,INFO,GAME_START,Inicio de sesión Piano Simon,,1,,Sesión de prueba inicial
+2025-01-08 12:00:15,INFO,NOTE_PLAYED,Reproduciendo Do,10,1,15,Primer botón presionado
+2025-01-08 12:00:25,ERROR,WRONG_NOTE,Error: Se esperaba Mi pero se presionó Fa,20,1,25,Error de memoria
+2025-01-08 12:00:30,INFO,LEVEL_COMPLETE,Nivel 1 completado,50,2,30,Avance de nivel
+```
+
+## 🤝 Contribuir
+
+1. Fork del proyecto
+2. Crear rama para nueva funcionalidad
+3. Commit de cambios
+4. Push a la rama
+5. Crear Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+
+## 🆕 Novedades v2.1
+
+- ✅ **Análisis neurocognitivo completo** con gráficas interactivas
+- ✅ **Exportación de datos** a Excel
+- ✅ **Reportes automáticos** con recomendaciones
+- ✅ **Interfaz mejorada** con pestañas especializadas
+- ✅ **Datos de ejemplo** para pruebas inmediatas
+
 ---
 
-**Desarrollado con ❤️ usando arquitectura modular profesional y principios SOLID** 
+**🎮 ¡Disfruta explorando las capacidades cognitivas con Arduino!** 🧠📊 

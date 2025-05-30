@@ -1,0 +1,14 @@
+timestamp,level,event_type,message,score,player_level,game_duration,session_notes
+2025-01-08 14:00:00,INFO,GAME_START,Segunda sesión Piano Simon,,1,,Sesión de mejora
+2025-01-08 14:00:10,INFO,NOTE_PLAYED,Reproduciendo Do,15,1,10,Reacción más rápida
+2025-01-08 14:00:12,INFO,NOTE_PLAYED,Reproduciendo Re,30,1,12,Memoria mejorada
+2025-01-08 14:00:14,INFO,NOTE_PLAYED,Reproduciendo Mi,45,1,14,Secuencia correcta
+2025-01-08 14:00:18,INFO,LEVEL_COMPLETE,Nivel 1 completado,60,2,18,Progreso más rápido
+2025-01-08 14:00:25,INFO,NOTE_PLAYED,Reproduciendo Fa,80,2,25,Nivel 2 iniciado
+2025-01-08 14:00:28,INFO,NOTE_PLAYED,Reproduciendo Sol,100,2,28,Continuando bien
+2025-01-08 14:00:35,INFO,LEVEL_COMPLETE,Nivel 2 completado,120,3,35,Excelente progreso
+2025-01-08 14:00:42,INFO,NOTE_PLAYED,Reproduciendo La,140,3,42,Nivel 3 iniciado
+2025-01-08 14:00:45,INFO,NOTE_PLAYED,Reproduciendo Si,160,3,45,Secuencia avanzada
+2025-01-08 14:00:50,INFO,LEVEL_COMPLETE,Nivel 3 completado,180,4,50,¡Nivel 4 alcanzado!
+2025-01-08 14:00:58,ERROR,WRONG_NOTE,Error en nivel 4,180,4,58,Complejidad alta
+2025-01-08 14:01:05,INFO,GAME_OVER,Sesión terminada - Mejor resultado,180,4,65,Gran mejora 

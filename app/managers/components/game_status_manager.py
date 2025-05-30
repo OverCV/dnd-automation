@@ -17,9 +17,15 @@ class GameStatusManager:
         self.colors = ArduinoColors()
     
     def show_game_status(self, game_id: str):
-        """Mostrar estado detallado del juego"""
+        """Mostrar estado detallado del juego - VERSIÓN MEJORADA con análisis cognitivo"""
         current_game = self.lifecycle.get_current_game()
         
+        # CORREGIDO: Para Piano Digital, mostrar análisis cognitivo con gráficas
+        if game_id == "piano_digital":
+            self._show_cognitive_analytics(game_id)
+            return
+        
+        # Para otros juegos, mostrar ventana de estado tradicional
         if current_game and self.lifecycle.is_game_running():
             try:
                 status = self.lifecycle.get_current_game_status()
@@ -32,6 +38,61 @@ class GameStatusManager:
                 "No hay juegos en ejecución para mostrar estado"
             )
     
+    def _show_cognitive_analytics(self, game_id: str):
+        """Mostrar ventana de análisis cognitivo con gráficas para Piano Simon"""
+        try:
+            # Importar la ventana de análisis cognitivo
+            from ui.cognitive.cognitive_analytics_window import open_cognitive_analytics
+            
+            # Abrir ventana de análisis cognitivo
+            analytics_window = open_cognitive_analytics(self.main_window.root, game_id)
+            
+            if analytics_window:
+                print(f"✅ Ventana de análisis cognitivo abierta para {game_id}")
+            else:
+                # Fallback: mostrar mensaje si no se puede abrir análisis cognitivo
+                messagebox.showinfo(
+                    "Análisis Cognitivo", 
+                    "📊 Análisis Cognitivo para Piano Simon\n\n"
+                    "Para ver gráficas detalladas:\n"
+                    "1. Ejecuta algunas sesiones del Piano Simon\n"
+                    "2. Los datos se guardarán automáticamente\n"
+                    "3. Las gráficas mostrarán tu progreso cognitivo\n\n"
+                    "¡Inicia una sesión para generar datos!"
+                )
+                
+        except ImportError as e:
+            print(f"⚠️ Error importando análisis cognitivo: {e}")
+            # Fallback: mostrar ventana de estado tradicional
+            current_game = self.lifecycle.get_current_game()
+            if current_game and self.lifecycle.is_game_running():
+                status = self.lifecycle.get_current_game_status()
+                self._create_status_window(status)
+            else:
+                messagebox.showinfo(
+                    "Piano Simon - Estado", 
+                    "📊 Estado del Piano Simon\n\n"
+                    "🎹 Juego de evaluación neurocognitiva\n"
+                    "🧠 Mide memoria, atención y tiempo de reacción\n\n"
+                    "Para ver análisis detallado:\n"
+                    "• Inicia una sesión del Piano Simon\n"
+                    "• Los datos se guardarán automáticamente\n"
+                    "• Usa este botón para ver tu progreso"
+                )
+                
+        except Exception as e:
+            print(f"❌ Error abriendo análisis cognitivo: {e}")
+            messagebox.showerror(
+                "Error", 
+                f"No se pudo abrir el análisis cognitivo:\n{e}\n\n"
+                f"Mostrando estado básico en su lugar."
+            )
+            # Fallback: mostrar ventana de estado tradicional
+            current_game = self.lifecycle.get_current_game()
+            if current_game and self.lifecycle.is_game_running():
+                status = self.lifecycle.get_current_game_status()
+                self._create_status_window(status)
+
     def _create_status_window(self, status: dict):
         """Crear ventana de estado mejorada"""
         status_window = tk.Toplevel(self.main_window.root)

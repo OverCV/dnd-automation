@@ -1,0 +1,18 @@
+timestamp,level,event_type,message,score,player_level,game_duration,session_notes
+2025-01-08 16:00:00,INFO,GAME_START,Tercera sesión Piano Simon,,1,,Sesión avanzada
+2025-01-08 16:00:08,INFO,NOTE_PLAYED,Reproduciendo Do,20,1,8,Inicio muy rápido
+2025-01-08 16:00:10,INFO,NOTE_PLAYED,Reproduciendo Re,40,1,10,Excelente memoria
+2025-01-08 16:00:12,INFO,NOTE_PLAYED,Reproduciendo Mi,60,1,12,Perfecta secuencia
+2025-01-08 16:00:15,INFO,LEVEL_COMPLETE,Nivel 1 completado,80,2,15,Récord de velocidad
+2025-01-08 16:00:20,INFO,NOTE_PLAYED,Reproduciendo Fa,100,2,20,Nivel 2 dominado
+2025-01-08 16:00:22,INFO,NOTE_PLAYED,Reproduciendo Sol,120,2,22,Fluidez mejorada
+2025-01-08 16:00:25,INFO,LEVEL_COMPLETE,Nivel 2 completado,140,3,25,Progreso excelente
+2025-01-08 16:00:30,INFO,NOTE_PLAYED,Reproduciendo La,160,3,30,Nivel 3 fluido
+2025-01-08 16:00:33,INFO,NOTE_PLAYED,Reproduciendo Si,180,3,33,Concentración alta
+2025-01-08 16:00:35,INFO,NOTE_PLAYED,Reproduciendo Do8,200,3,35,Secuencia completa
+2025-01-08 16:00:38,INFO,LEVEL_COMPLETE,Nivel 3 completado,220,4,38,¡Avanzando rápido!
+2025-01-08 16:00:45,INFO,NOTE_PLAYED,Reproduciendo Mi,240,4,45,Nivel 4 iniciado
+2025-01-08 16:00:48,INFO,NOTE_PLAYED,Reproduciendo Fa,260,4,48,Complejidad alta
+2025-01-08 16:00:52,INFO,LEVEL_COMPLETE,Nivel 4 completado,280,5,52,¡Nivel 5 desbloqueado!
+2025-01-08 16:01:00,ERROR,REACTION_TIME,Reacción lenta en nivel 5,280,5,60,Fatiga cognitiva
+2025-01-08 16:01:10,INFO,GAME_OVER,Sesión terminada - Nuevo récord,280,5,70,Excelente rendimiento 
