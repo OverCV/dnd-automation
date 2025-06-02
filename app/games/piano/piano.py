@@ -17,7 +17,12 @@ class PianoSimonGame(BaseGame):
     Usa GameStateManager robusto para evitar bugs de threading
     """
 
-    def __init__(self, arduino_manager: ArduinoManager, enable_cognitive_logging: bool = True, patient_id: str = None):
+    def __init__(
+        self,
+        arduino_manager: ArduinoManager,
+        enable_cognitive_logging: bool = False,
+        patient_id: str = "default",
+    ):
         super().__init__(arduino_manager)
 
         self.arduino = arduino_manager
@@ -26,7 +31,7 @@ class PianoSimonGame(BaseGame):
 
         # NUEVO: Gestor de estado robusto
         self.state_manager = GameStateManager()
-        
+
         # Mejorar sistema de patient_id
         if patient_id is None:
             patient_id = self._get_or_create_patient_id()
@@ -36,13 +41,12 @@ class PianoSimonGame(BaseGame):
         self.visual_manager = PianoVisualManager()
         self.hardware_manager = PianoHardwareManager(arduino_manager)
         self.game_logic = PianoGameLogic(
-            enable_cognitive_logging=enable_cognitive_logging,
-            patient_id=patient_id
+            enable_cognitive_logging=enable_cognitive_logging, patient_id=patient_id
         )
 
         # Configurar callbacks del game logic
         self._setup_callbacks()
-        
+
         # Registrar funciones de limpieza
         self._register_cleanup_callbacks()
 
@@ -55,10 +59,12 @@ class PianoSimonGame(BaseGame):
             on_game_over=self.audio_manager.reproducir_secuencia_game_over,
             on_victory=self.audio_manager.reproducir_secuencia_victoria,
         )
-    
+
     def _register_cleanup_callbacks(self):
         """Registrar funciones de limpieza en el state manager"""
-        self.state_manager.add_cleanup_callback(self.audio_manager.detener_todos_sonidos)
+        self.state_manager.add_cleanup_callback(
+            self.audio_manager.detener_todos_sonidos
+        )
         self.state_manager.add_cleanup_callback(self.visual_manager.cerrar)
         self.state_manager.add_cleanup_callback(self.hardware_manager.cleanup)
 
@@ -85,10 +91,10 @@ class PianoSimonGame(BaseGame):
 
             # Iniciar usando el state manager robusto
             success = self.state_manager.start_game(self._game_loop_wrapper)
-            
+
             if success:
                 print("🎹 Piano Simon Says iniciado correctamente")
-            
+
             return success
 
         except Exception as e:
@@ -107,10 +113,10 @@ class PianoSimonGame(BaseGame):
                 return False
 
             print("🧪 Iniciando modo de prueba...")
-            
+
             # Iniciar usando el state manager robusto
             success = self.state_manager.start_game(self._test_loop_wrapper)
-            
+
             return success
 
         except Exception as e:
@@ -130,7 +136,7 @@ class PianoSimonGame(BaseGame):
         return {
             "name": self.name,
             "running": self.state_manager.is_running(),
-            "lifecycle_state": state_manager_status['lifecycle_state'],
+            "lifecycle_state": state_manager_status["lifecycle_state"],
             "game_state": game_status["game_state"].name,
             "level": game_status["player_level"],
             "max_level": game_status["max_level"],
@@ -144,14 +150,14 @@ class PianoSimonGame(BaseGame):
                 nota[0] for nota in self.audio_manager.obtener_todas_notas()
             ],
             "hardware_initialized": self.hardware_manager.is_hardware_ready(),
-            "uptime": state_manager_status['uptime'],
-            "total_runs": state_manager_status['total_runs']
+            "uptime": state_manager_status["uptime"],
+            "total_runs": state_manager_status["total_runs"],
         }
 
     def _game_loop_wrapper(self):
         """Wrapper del loop principal con manejo robusto"""
         print("🎮 Iniciando loop principal del Simon...")
-        
+
         while self.state_manager.should_continue():
             try:
                 current_time = time.time() * 1000
@@ -225,7 +231,7 @@ class PianoSimonGame(BaseGame):
                 for button_index in pressed_buttons:
                     self.audio_manager.reproducir_nota(button_index, 0.5)
                     self.visual_manager.activar_animacion_tecla(button_index)
-                    
+
                     nota_info = self.audio_manager.obtener_info_nota(button_index)
                     pin_info = self.hardware_manager.get_pin_info()[button_index]
                     test_message = f"🎵 Probando: {nota_info[0]} ({nota_info[1]} Hz) - Pin {pin_info}"
@@ -302,22 +308,25 @@ class PianoSimonGame(BaseGame):
             # Intentar cargar del sistema de gestión de pacientes específico de piano_simon
             import json
             import os
-            
+
             patients_file = "data/cognitive/piano_simon/patients.json"
             if os.path.exists(patients_file):
-                with open(patients_file, 'r', encoding='utf-8') as f:
+                with open(patients_file, "r", encoding="utf-8") as f:
                     patients = json.load(f)
-                    
+
                 # Si hay pacientes, usar el último
                 if patients:
-                    latest_patient = max(patients.keys(), key=lambda k: patients[k].get('created', ''))
+                    latest_patient = max(
+                        patients.keys(), key=lambda k: patients[k].get("created", "")
+                    )
                     return latest_patient
-                    
+
         except Exception as e:
             print(f"⚠️ No se pudo acceder al sistema de pacientes: {e}")
-        
+
         # Fallback: crear ID temporal
         from datetime import datetime
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"TEMP_PIANO_PLAYER_{timestamp}"
 
@@ -325,7 +334,9 @@ class PianoSimonGame(BaseGame):
 # Funciones de utilidad para compatibilidad
 def create_piano_simon_game(arduino_manager: ArduinoManager) -> PianoSimonGame:
     """Factory function para crear el juego Piano Simon"""
-    return PianoSimonGame(arduino_manager)
+    return PianoSimonGame(
+        arduino_manager, enable_cognitive_logging=True, patient_id="paciente_actual"
+    )
 
 
 def validate_hardware_setup(arduino_manager: ArduinoManager) -> bool:

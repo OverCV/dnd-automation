@@ -37,96 +37,145 @@ class CognitiveLogger:
         os.makedirs(self.sessions_dir, exist_ok=True)
         print(f"📁 Directorio creado: {self.sessions_dir}")
     
-    def _initialize_csv(self):
-        """Inicializar archivo CSV con headers específicos del juego"""
-        try:
-            # Headers comunes para todos los juegos
-            common_headers = [
-                'timestamp',
-                'session_id', 
-                'game_type',
-                'level',
-                'response_time_ms',
-                'accuracy',
-                'is_correct'
+    def _create_csv_file(self) -> str:
+        """Crear archivo CSV con headers apropiados"""
+        filename = f"{self.session_id}.csv"
+        filepath = os.path.join(self.data_dir, filename)
+        
+        # Headers específicos por tipo de juego
+        if self.game_type == "piano_simon" or self.game_type == "piano_digital":
+            headers = [
+                "timestamp", "session_id", "level", "sequence_length", 
+                "presentation_time_ms", "response_time_ms", "accuracy",
+                "error_type", "sequence_shown", "sequence_input", 
+                "reaction_latency_ms", "is_correct", "error_position"
             ]
-            
-            # Headers específicos por tipo de juego
-            game_specific_headers = self._get_game_specific_headers()
-            
-            headers = common_headers + game_specific_headers
-            
-            with open(self.log_file, 'w', newline='', encoding='utf-8') as file:
-                writer = csv.writer(file)
-                writer.writerow(headers)
-                
-            print(f"📊 Archivo CSV inicializado: {self.log_file}")
-            
-        except Exception as e:
-            print(f"❌ Error inicializando CSV: {e}")
-    
-    def _get_game_specific_headers(self) -> list:
-        """Obtener headers específicos según el tipo de juego"""
-        if self.game_type == "piano_simon":
-            return [
-                'sequence_length',
-                'presentation_time_ms', 
-                'error_type',
-                'sequence_shown',
-                'sequence_input',
-                'reaction_latency_ms',
-                'error_position',
-                'melody_name'
+        elif self.game_type == "two_lane_runner":
+            headers = [
+                "timestamp", "session_id", "obstacle_position", 
+                "reaction_time_ms", "success", "lane_change_accuracy",
+                "speed_level", "decision_time_ms"
             ]
-        elif self.game_type == "ping_pong":
-            return [
-                'ball_speed',
-                'paddle_position',
-                'hit_accuracy',
-                'reaction_zone'
-            ]
-        elif self.game_type == "two_lanes":
-            return [
-                'lane_changed',
-                'obstacle_type',
-                'distance_to_obstacle',
-                'decision_time_ms'
+        elif self.game_type == "osu_rhythm":
+            headers = [
+                "timestamp", "session_id", "circle_x", "circle_y", 
+                "cursor_x", "cursor_y", "spawn_time", "hit_time",
+                "reaction_time_ms", "spatial_accuracy", "temporal_accuracy",
+                "hit_result", "score", "combo", "difficulty_level"
             ]
         else:
-            # Headers genéricos para juegos no definidos
-            return [
-                'game_specific_data',
-                'extra_info'
+            # Headers genéricos para otros juegos
+            headers = [
+                "timestamp", "session_id", "event_type", "value", 
+                "reaction_time_ms", "accuracy", "success"
             ]
+        
+        # Crear archivo con headers
+        with open(filepath, 'w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+        
+        return filepath
     
-    def log_event(self, event_data: Dict[str, Any]) -> bool:
-        """Registrar evento cognitivo"""
-        if not self.enable_logging:
-            return True
-            
+    def log_piano_event(self, level: int, sequence_shown: list, sequence_input: list,
+                       presentation_time: float, response_time: float, **kwargs):
+        """Log específico para Piano-Simon - Súper directo"""
+        
+        # Calcular métricas básicas
+        accuracy = self._calculate_accuracy(sequence_shown, sequence_input)
+        error_type = self._detect_error_type(sequence_shown, sequence_input)
+        error_position = self._find_error_position(sequence_shown, sequence_input)
+        is_correct = accuracy == 1.0
+        
+        # Datos para CSV
+        row_data = [
+            datetime.now().isoformat(),
+            self.session_id,
+            level,
+            len(sequence_shown),
+            presentation_time,
+            response_time,
+            accuracy,
+            error_type,
+            '|'.join(map(str, sequence_shown)),  # Simple: separar con |
+            '|'.join(map(str, sequence_input)),
+            kwargs.get('reaction_latency', 0),
+            is_correct,
+            error_position
+        ]
+        
+        self._write_row(row_data)
+        print(f"📊 Piano event logged: L{level}, Acc:{accuracy:.2f}")
+    
+    def log_runner_event(self, obstacle_position: str, reaction_time: float,
+                        success: bool, lane_accuracy: float, speed_level: int, **kwargs):
+        """Log específico para Two-Lane Runner"""
+        
+        row_data = [
+            datetime.now().isoformat(),
+            self.session_id,
+            obstacle_position,
+            reaction_time,
+            success,
+            lane_accuracy,
+            speed_level,
+            kwargs.get('decision_time', 0)
+        ]
+        
+        self._write_row(row_data)
+        print(f"🏃 Runner event logged: {obstacle_position}, Success:{success}")
+    
+    def log_generic_event(self, event_type: str, value: Any, 
+                         reaction_time: float = 0, accuracy: float = 0, 
+                         success: bool = False):
+        """Log genérico para otros juegos"""
+        
+        row_data = [
+            datetime.now().isoformat(),
+            self.session_id,
+            event_type,
+            str(value),
+            reaction_time,
+            accuracy,
+            success
+        ]
+        
+        self._write_row(row_data)
+        print(f"🎮 Generic event logged: {event_type}")
+    
+    def log_osu_event(self, circle_x: int, circle_y: int, cursor_x: int, cursor_y: int,
+                     spawn_time: float, hit_time: float, reaction_time: float,
+                     spatial_accuracy: float, temporal_accuracy: float, hit_result: str,
+                     score: int, combo: int, difficulty_level: int):
+        """Log específico para juego Osu - Precisión espacial y temporal"""
+        
+        row_data = [
+            datetime.now().isoformat(),
+            self.session_id,
+            circle_x,
+            circle_y,
+            cursor_x,
+            cursor_y,
+            spawn_time,
+            hit_time,
+            reaction_time,
+            spatial_accuracy,
+            temporal_accuracy,
+            hit_result,
+            score,
+            combo,
+            difficulty_level
+        ]
+        
+        self._write_row(row_data)
+        print(f"🎯 Osu event logged: {hit_result}, Spatial:{spatial_accuracy:.1f}%, Temporal:{temporal_accuracy:.1f}%")
+    
+    def _write_row(self, row_data: list):
+        """Escribir fila al CSV - Súper simple"""
         try:
-            # Datos comunes
-            common_data = {
-                'timestamp': datetime.now().isoformat(),
-                'session_id': self.session_id,
-                'game_type': self.game_type,
-                'level': event_data.get('level', 1),
-                'response_time_ms': event_data.get('response_time_ms', 0),
-                'accuracy': event_data.get('accuracy', 0.0),
-                'is_correct': event_data.get('is_correct', False)
-            }
-            
-            # Combinar con datos específicos del juego
-            full_data = {**common_data, **event_data}
-            
-            # Escribir al CSV
-            with open(self.log_file, 'a', newline='', encoding='utf-8') as file:
-                writer = csv.DictWriter(file, fieldnames=self._get_all_headers())
-                writer.writerow(full_data)
-            
-            self.events_logged += 1
-            return True
-            
+            with open(self.csv_file, 'a', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerow(row_data)
         except Exception as e:
             print(f"❌ Error logging evento: {e}")
             return False

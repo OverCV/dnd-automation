@@ -17,9 +17,15 @@ class GameStatusManager:
         self.colors = ArduinoColors()
     
     def show_game_status(self, game_id: str):
-        """Mostrar estado detallado del juego"""
+        """Mostrar estado detallado del juego - VERSIÓN MEJORADA con análisis cognitivo"""
         current_game = self.lifecycle.get_current_game()
         
+        # CORREGIDO: Para Piano Digital, mostrar análisis cognitivo con gráficas
+        if game_id == "piano_digital":
+            self._show_cognitive_analytics(game_id)
+            return
+        
+        # Para otros juegos, mostrar ventana de estado tradicional
         if current_game and self.lifecycle.is_game_running():
             try:
                 status = self.lifecycle.get_current_game_status()
@@ -32,6 +38,35 @@ class GameStatusManager:
                 "No hay juegos en ejecución para mostrar estado"
             )
     
+    def _show_cognitive_analytics(self, game_id: str):
+        """Mostrar ventana de análisis cognitivo con gráficas para Piano Simon"""
+        try:
+            print(f"🧠 Abriendo análisis cognitivo para: {game_id}")
+            
+            # Importar ventanas específicas según el juego
+            if game_id == "piano_digital":
+                from ui.cognitive.cognitive_analytics_window import open_cognitive_analytics
+                open_cognitive_analytics(self.main_window.root, game_id)
+            elif game_id == "osu_rhythm":
+                from ui.cognitive.osu_analytics_window import open_osu_cognitive_analytics
+                open_osu_cognitive_analytics(self.main_window.root, game_id)
+            else:
+                # Para juegos sin análisis específico, usar ventana genérica
+                from ui.cognitive.cognitive_analytics_window import open_cognitive_analytics
+                open_cognitive_analytics(self.main_window.root, game_id)
+                
+        except ImportError as e:
+            print(f"❌ Error importando ventana de análisis: {e}")
+            messagebox.showerror("Error", f"No se pudo cargar el análisis cognitivo: {e}")
+        except Exception as e:
+            print(f"❌ Error abriendo análisis cognitivo: {e}")
+            messagebox.showerror("Error", f"Error abriendo análisis: {e}")
+            # Fallback: mostrar ventana de estado tradicional
+            current_game = self.lifecycle.get_current_game()
+            if current_game and self.lifecycle.is_game_running():
+                status = self.lifecycle.get_current_game_status()
+                self._create_status_window(status)
+
     def _create_status_window(self, status: dict):
         """Crear ventana de estado mejorada"""
         status_window = tk.Toplevel(self.main_window.root)

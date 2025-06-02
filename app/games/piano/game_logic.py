@@ -6,8 +6,14 @@ Maneja reglas, estados y progresión del juego con MELODÍAS FAMOSAS
 import time
 import random
 from enum import Enum
-from typing import List, Dict, Any, Callable, Optional, Tuple
-from core.cognitive.cognitive_logger import CognitiveLogger
+
+# Importar logging cognitivo - SÚPER SIMPLE
+try:
+    from core.cognitive import SessionManager
+    COGNITIVE_LOGGING_AVAILABLE = True
+except ImportError:
+    COGNITIVE_LOGGING_AVAILABLE = False
+    print("⚠️ Logging cognitivo no disponible")
 
 
 class GameState(Enum):
@@ -136,6 +142,26 @@ class PianoGameLogic:
         self.on_clear_highlight = on_clear_highlight
         self.on_game_over = on_game_over
         self.on_victory = on_victory
+    
+    def reset_game(self):
+        """Resetear estado del juego"""
+        self.player_level = 1
+        self.input_count = 0
+        self.sequence_index = 0
+        self.game_state = GameState.WAITING_TO_START
+        
+        # Generar nueva secuencia aleatoria
+        self.game_sequence = [random.randint(0, 7) for _ in range(self.MAX_LEVEL)]
+        self.game_message = "Presiona cualquier tecla para empezar"
+        
+        # COGNITIVE LOGGING: Iniciar nueva sesión si está habilitado
+        if self.cognitive_logging and self.session_manager:
+            try:
+                self.current_logger = self.session_manager.start_session("piano_digital", self.patient_id)
+            except Exception as e:
+                print(f"❌ Error iniciando sesión cognitiva: {e}")
+        
+        print(f"🔄 Juego reiniciado - Secuencia generada para {self.MAX_LEVEL} niveles")
     
     def start_game_with_button(self, button_index: int):
         """Iniciar juego con botón presionado"""

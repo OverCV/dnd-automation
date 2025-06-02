@@ -112,7 +112,7 @@ class GameUIManager:
         # Botón iniciar
         start_btn = tk.Button(
             controls_frame,
-            text="▶️ Iniciar",
+            text="🎮 JUGAR",
             command=lambda: start_callback(game_id),
             bg=self.colors.SUCCESS,
             fg=self.colors.BLUE_DARK,
@@ -128,7 +128,7 @@ class GameUIManager:
         if game_id in self.registry.get_games_with_test_mode():
             test_btn = tk.Button(
                 controls_frame,
-                text="🧪 Probar",
+                text="🔧 Test HW",
                 command=lambda: test_callback(game_id),
                 bg=self.colors.ERROR,
                 fg=self.colors.PURPLE,
@@ -156,9 +156,10 @@ class GameUIManager:
                      padx=2, pady=2, sticky="ew")
 
         # Botón de estado
+        status_btn_text = "📈 Análisis" if game_id in ["piano_digital", "osu_rhythm"] else "📊 Estado"
         status_btn = tk.Button(
             controls_frame,
-            text="📊 Estado",
+            text=status_btn_text,
             command=lambda: status_callback(game_id),
             bg=self.colors.INFO,
             fg=self.colors.BLUE_DARK,
@@ -189,13 +190,13 @@ class GameUIManager:
         for child in controls_frame.winfo_children():
             if isinstance(child, tk.Button):
                 text = child.cget("text")
-                if "Iniciar" in text:
+                if "JUGAR" in text or "Iniciar" in text or "Ejecutándose" in text:
                     start_btn = child
-                elif "Probar" in text:
+                elif "Test HW" in text or "Probar" in text or "Probando" in text:
                     test_btn = child
                 elif "Detener" in text:
                     stop_btn = child
-                elif "Estado" in text:
+                elif "Estado" in text or "Análisis" in text:
                     status_btn = child
         
         # Guardar referencias
@@ -221,7 +222,7 @@ class GameUIManager:
                     widgets["test_btn"].config(state=tk.DISABLED)
             else:
                 widgets["frame"].config(bg=self.colors.LIGHT_GRAY, bd=2)
-                widgets["start_btn"].config(text="▶️ Iniciar", state=tk.NORMAL)
+                widgets["start_btn"].config(text="🎮 JUGAR", state=tk.NORMAL)
                 if "test_btn" in widgets:
                     widgets["test_btn"].config(state=tk.NORMAL)
 
@@ -232,20 +233,20 @@ class GameUIManager:
                 widgets["frame"].config(bg=self.colors.PURPLE, bd=3)
                 widgets["start_btn"].config(state=tk.DISABLED)
                 if "test_btn" in widgets:
-                    widgets["test_btn"].config(text="🧪 Probando...", state=tk.DISABLED)
+                    widgets["test_btn"].config(text="🔧 Probando...", state=tk.DISABLED)
             else:
                 widgets["frame"].config(bg=self.colors.LIGHT_GRAY, bd=2)
-                widgets["start_btn"].config(text="▶️ Iniciar", state=tk.NORMAL)
+                widgets["start_btn"].config(text="🎮 JUGAR", state=tk.NORMAL)
                 if "test_btn" in widgets:
-                    widgets["test_btn"].config(text="🧪 Probar", state=tk.NORMAL)
+                    widgets["test_btn"].config(text="🔧 Test HW", state=tk.NORMAL)
 
     def restore_game_ui(self):
         """Restaurar UI de juegos al estado normal"""
         for game_id, widgets in self.game_widgets.items():
             widgets["frame"].config(bg=self.colors.LIGHT_GRAY, bd=2)
-            widgets["start_btn"].config(text="▶️ Iniciar", state=tk.NORMAL)
+            widgets["start_btn"].config(text="🎮 JUGAR", state=tk.NORMAL)
             if "test_btn" in widgets:
-                widgets["test_btn"].config(text="🧪 Probar", state=tk.NORMAL)
+                widgets["test_btn"].config(text="🔧 Test HW", state=tk.NORMAL)
     
     def get_game_widgets(self) -> Dict[str, Dict]:
         """Obtener diccionario de widgets de juegos"""
