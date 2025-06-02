@@ -7,6 +7,7 @@ from core.base_game import BaseGame
 from games.ping_pong.ping_pong import PingPongGame
 from games.two_lanes.two_lanes import TwoLaneRunnerGame
 from games.piano.piano import PianoSimonGame
+from games.osu.osu import OsuGame
 
 
 class GameRegistry:
@@ -18,6 +19,7 @@ class GameRegistry:
             "ping_pong": PingPongGame,
             "two_lane_runner": TwoLaneRunnerGame,
             "piano_digital": PianoSimonGame,
+            "osu_rhythm": OsuGame,
             # Futuros juegos:
             # 'simon_says': SimonGame,
             # 'tetris': TetrisGame,
@@ -30,12 +32,14 @@ class GameRegistry:
             "ping_pong": "Juego de Ping Pong con dos palas y una pelota. Requiere sensores de movimiento.",
             "two_lane_runner": "Juego de carreras en dos carriles. Utiliza sensores de distancia para detectar obstáculos.",
             "piano_digital": "Piano digital con teclas táctiles. Requiere sensores capacitivos en pines 2-9.",
+            "osu_rhythm": "Juego de ritmo y precisión. Requiere joystick analógico KY-023 en pines A0, A1 y D2.",
             "simon_says": "Juego de memoria Simon Says con 6 LEDs y keypad 4x4. Comunicación serial directa.",
         }
         
         # NUEVO: Juegos que soportan logging cognitivo - SÚPER SIMPLE
         self.cognitive_games: Dict[str, str] = {
             "piano_digital": "🧠 Evalúa memoria, secuencias, tiempo de reacción, fatiga cognitiva",
+            "osu_rhythm": "🧠 Evalúa coordinación ojo-mano, precisión espacial, timing, velocidad de procesamiento",
             # Futuros:
             # "two_lane_runner": "🧠 Evalúa atención dividida, coordinación, tiempo de reacción",
         }
@@ -45,6 +49,7 @@ class GameRegistry:
             "ping_pong": "🏓",
             "two_lane_runner": "🏃",
             "piano_digital": "🎹",
+            "osu_rhythm": "🎯",
             "tetris": "🧩",
             "snake": "🐍",
             "breakout": "🧱",
@@ -76,8 +81,8 @@ class GameRegistry:
     
     def get_games_with_test_mode(self) -> list:
         """Obtener lista de juegos que tienen modo de prueba"""
-        # Por ahora solo piano digital
-        return ["piano_digital"]
+        # Piano digital y Osu tienen modo de prueba
+        return ["piano_digital", "osu_rhythm"]
     
     def supports_cognitive_logging(self, game_id: str) -> bool:
         """Verificar si un juego soporta logging cognitivo"""

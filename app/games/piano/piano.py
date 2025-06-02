@@ -293,7 +293,9 @@ class PianoSimonGame(BaseGame):
 # Funciones de utilidad para compatibilidad
 def create_piano_simon_game(arduino_manager: ArduinoManager) -> PianoSimonGame:
     """Factory function para crear el juego Piano Simon"""
-    return PianoSimonGame(arduino_manager, enable_cognitive_logging=True, patient_id="paciente_actual")
+    return PianoSimonGame(
+        arduino_manager, enable_cognitive_logging=True, patient_id="paciente_actual"
+    )
 
 
 def validate_hardware_setup(arduino_manager: ArduinoManager) -> bool:

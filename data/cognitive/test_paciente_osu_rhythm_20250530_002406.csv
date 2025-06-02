@@ -1,0 +1,2 @@
+timestamp,session_id,circle_x,circle_y,cursor_x,cursor_y,spawn_time,hit_time,reaction_time_ms,spatial_accuracy,temporal_accuracy,hit_result,score,combo,difficulty_level
+2025-05-30T00:24:06.716060,test_paciente_osu_rhythm_20250530_002406,400,300,395,305,1000.0,1300.0,300.0,92.5,88.7,PERFECT,300,5,3

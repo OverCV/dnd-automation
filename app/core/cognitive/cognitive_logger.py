@@ -35,7 +35,7 @@ class CognitiveLogger:
         filepath = os.path.join(self.data_dir, filename)
         
         # Headers específicos por tipo de juego
-        if self.game_type == "piano_simon":
+        if self.game_type == "piano_simon" or self.game_type == "piano_digital":
             headers = [
                 "timestamp", "session_id", "level", "sequence_length", 
                 "presentation_time_ms", "response_time_ms", "accuracy",
@@ -47,6 +47,13 @@ class CognitiveLogger:
                 "timestamp", "session_id", "obstacle_position", 
                 "reaction_time_ms", "success", "lane_change_accuracy",
                 "speed_level", "decision_time_ms"
+            ]
+        elif self.game_type == "osu_rhythm":
+            headers = [
+                "timestamp", "session_id", "circle_x", "circle_y", 
+                "cursor_x", "cursor_y", "spawn_time", "hit_time",
+                "reaction_time_ms", "spatial_accuracy", "temporal_accuracy",
+                "hit_result", "score", "combo", "difficulty_level"
             ]
         else:
             # Headers genéricos para otros juegos
@@ -127,6 +134,33 @@ class CognitiveLogger:
         
         self._write_row(row_data)
         print(f"🎮 Generic event logged: {event_type}")
+    
+    def log_osu_event(self, circle_x: int, circle_y: int, cursor_x: int, cursor_y: int,
+                     spawn_time: float, hit_time: float, reaction_time: float,
+                     spatial_accuracy: float, temporal_accuracy: float, hit_result: str,
+                     score: int, combo: int, difficulty_level: int):
+        """Log específico para juego Osu - Precisión espacial y temporal"""
+        
+        row_data = [
+            datetime.now().isoformat(),
+            self.session_id,
+            circle_x,
+            circle_y,
+            cursor_x,
+            cursor_y,
+            spawn_time,
+            hit_time,
+            reaction_time,
+            spatial_accuracy,
+            temporal_accuracy,
+            hit_result,
+            score,
+            combo,
+            difficulty_level
+        ]
+        
+        self._write_row(row_data)
+        print(f"🎯 Osu event logged: {hit_result}, Spatial:{spatial_accuracy:.1f}%, Temporal:{temporal_accuracy:.1f}%")
     
     def _write_row(self, row_data: list):
         """Escribir fila al CSV - Súper simple"""
