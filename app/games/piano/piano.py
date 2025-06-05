@@ -10,7 +10,7 @@ from .hardware_manager import PianoHardwareManager
 from .game_logic import PianoGameLogic
 from .game_state_manager import GameStateManager
 
-
+ 
 class PianoSimonGame(BaseGame):
     """
     Coordinador principal del Piano Simon - VERSIÓN REFACTORIZADA
