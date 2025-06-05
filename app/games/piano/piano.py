@@ -13,10 +13,10 @@ from .game_logic import PianoGameLogic
 class PianoSimonGame(BaseGame):
     """Coordinador principal - VERSIÓN MODULAR usando 3 managers especializados"""
 
-    def __init__(
+    def __init__( 
         self,
         arduino_manager: ArduinoManager,
-        enable_cognitive_logging: bool = False,
+                enable_cognitive_logging: bool = False,
         patient_id: str = "default",
     ):
         super().__init__(arduino_manager)
