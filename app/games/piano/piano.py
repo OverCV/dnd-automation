@@ -4,13 +4,15 @@ from typing import Dict, Any
 
 from core.base_game import BaseGame
 from core.arduino_manager import ArduinoManager
+
 from .audio_manager import PianoAudioManager
 from .visual_manager import PianoVisualManager, GameState
 from .hardware_manager import PianoHardwareManager
+
 from .game_logic import PianoGameLogic
 from .game_state_manager import GameStateManager
 
- 
+
 class PianoSimonGame(BaseGame):
     """
     Coordinador principal del Piano Simon - VERSIÓN REFACTORIZADA
